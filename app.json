@@ -4,7 +4,8 @@
         "description": "Editor de imagens e manipulação de fotos.",
         "appimage_url": "https://edgeuno-bog2.mm.fcix.net/gimp/gimp/v3.0/linux/GIMP-3.0.4-x86_64.AppImage",
         "icon": "gimp",
-        "category": "Graphics",
+        "category": "Gráficos",
+        "app": "Graphics",
         "version": "3.0.4",
         "details": "GIMP (GNU Image Manipulation Program) é um editor de imagens de código aberto para retocar fotos, composição de imagens e criação de arte.",
         "screenshots": []
@@ -15,6 +16,7 @@
         "appimage_url": "https://github.com/vlc-appimage/vlc-appimage/releases/download/vlc-3.0.20/VLC-3.0.20-x86_64.AppImage",
         "icon": "vlc",
         "category": "Multimídia",
+        "app": "Multimedia",
         "version": "3.0.20",
         "details": "VLC Media Player é um reprodutor de mídia de código aberto, gratuito e portátil, que pode reproduzir a maioria dos arquivos de mídia, bem como DVDs, CDs de áudio, VCDs e vários protocolos de streaming.",
         "screenshots": []
@@ -25,6 +27,7 @@
         "appimage_url": "https://github.com/Inkscape/inkscape/releases/download/inkscape-1.3.2/Inkscape-1.3.2-x64.AppImage",
         "icon": "inkscape",
         "category": "Gráficos",
+        "app": "Graphics",
         "version": "1.3.2",
         "details": "Inkscape é um editor de gráficos vetoriais de código aberto, semelhante ao Adobe Illustrator, CorelDRAW ou Xara X, usando o formato de arquivo Scalable Vector Graphics (SVG) padrão do W3C.",
         "screenshots": []
@@ -35,6 +38,7 @@
         "appimage_url": "https://download.kde.org/stable/krita/6.0.1/krita-6.0.1-x86_64.appimage",
         "icon": "krita",
         "category": "Gráficos",
+        "app": "Graphics",
         "version": "6.0.1",
         "details": "Krita é um programa de pintura digital gratuito e de código aberto projetado para artistas que buscam ferramentas criativas para ilustração, conceitos, quadrinhos, e mais.",
         "screenshots": []
@@ -45,6 +49,7 @@
         "appimage_url": "https://github.com/portable-apps/firefox-appimage/releases/download/v127.0/Firefox-127.0-x86_64.AppImage",
         "icon": "firefox",
         "category": "Internet",
+        "app": "Internet",
         "version": "127.0",
         "details": "Mozilla Firefox é um navegador de código aberto conhecido por sua privacidade, velocidade e capacidade de personalização através de extensões e temas.",
         "screenshots": []
