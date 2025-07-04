@@ -2,7 +2,7 @@
     {
         "name": "GIMP",
         "description": "Editor de imagens e manipulação de fotos.",
-        "appimage_url": "https://github.com/aferrero2707/gimp-appimage/releases/download/continuous/GIMP_AppImage-2.10.36-20231122-x86_64.AppImage",
+        "appimage_url": "https://edgeuno-bog2.mm.fcix.net/gimp/gimp/v3.0/linux/GIMP-3.0.4-x86_64.AppImage",
         "icon": "gimp",
         "category": "Gráficos",
         "version": "2.10.36",
