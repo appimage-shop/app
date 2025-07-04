@@ -55,7 +55,7 @@ A AppImage Shop requer algumas bibliotecas e ferramentas para funcionar corretam
 
 1.  **Baixe o arquivo diretamente do nosso site:**
     ```bash
-    Site aqui
+    https://appimage-shop.github.io/app/
     ```
 2.  **Execute a aplicação:**
     ```bash
