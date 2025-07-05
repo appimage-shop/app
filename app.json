@@ -11,47 +11,14 @@
         "screenshots": []
     },
     {
-        "name": "VLC Media Player",
-        "description": "O reprodutor multimídia universal.",
-        "appimage_url": "https://github.com/vlc-appimage/vlc-appimage/releases/download/vlc-3.0.20/VLC-3.0.20-x86_64.AppImage",
-        "icon": "vlc",
-        "category": "Multimídia",
-        "app": "Multimedia",
-        "version": "3.0.20",
-        "details": "VLC Media Player é um reprodutor de mídia de código aberto, gratuito e portátil, que pode reproduzir a maioria dos arquivos de mídia, bem como DVDs, CDs de áudio, VCDs e vários protocolos de streaming.",
-        "screenshots": []
-    },
-    {
-        "name": "Inkscape",
-        "description": "Software de gráficos vetoriais de nível profissional.",
-        "appimage_url": "https://github.com/Inkscape/inkscape/releases/download/inkscape-1.3.2/Inkscape-1.3.2-x64.AppImage",
-        "icon": "inkscape",
-        "category": "Gráficos",
-        "app": "Graphics",
-        "version": "1.3.2",
-        "details": "Inkscape é um editor de gráficos vetoriais de código aberto, semelhante ao Adobe Illustrator, CorelDRAW ou Xara X, usando o formato de arquivo Scalable Vector Graphics (SVG) padrão do W3C.",
-        "screenshots": []
-    },
-    {
-        "name": "Krita",
-        "description": "Pintura digital e ilustração.",
-        "appimage_url": "https://download.kde.org/stable/krita/6.0.1/krita-6.0.1-x86_64.appimage",
-        "icon": "krita",
-        "category": "Gráficos",
-        "app": "Graphics",
-        "version": "6.0.1",
-        "details": "Krita é um programa de pintura digital gratuito e de código aberto projetado para artistas que buscam ferramentas criativas para ilustração, conceitos, quadrinhos, e mais.",
-        "screenshots": []
-    },
-    {
-        "name": "Firefox",
-        "description": "Navegador web rápido e seguro.",
-        "appimage_url": "https://github.com/portable-apps/firefox-appimage/releases/download/v127.0/Firefox-127.0-x86_64.AppImage",
-        "icon": "firefox",
-        "category": "Internet",
-        "app": "Internet",
-        "version": "127.0",
-        "details": "Mozilla Firefox é um navegador de código aberto conhecido por sua privacidade, velocidade e capacidade de personalização através de extensões e temas.",
+        "name": "Telegram-Desktop",
+        "description": "Serviço de mensagens instantâneas baseado na nuvem.",
+        "appimage_url": "https://github.com/srevinsaju/Telegram-AppImage/releases/download/continuous/Telegram_Desktop-x86_64.AppImage",
+        "icon": "telegram",
+        "category": "Mensagens",
+        "app": "Messenging",
+        "version": "Continuous Build",
+        "details": "O Telegram é um serviço de mensagens instantâneas baseado na nuvem. O Telegram está disponível para smartphones ou tablets HarmonyOS, Android, iOS, Windows Phone, Ubuntu Touch, Firefox OS), computadores (Windows, OS X, GNU/Linux) e também como Aplicação web.",
         "screenshots": []
     }
 ]
