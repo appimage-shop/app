@@ -11,7 +11,7 @@
         "screenshots": []
     },
     {
-        "name": "Telegram Desktop",
+        "name": "Telegram",
         "description": "Serviço de mensagens instantâneas baseado na nuvem.",
         "appimage_url": "https://github.com/srevinsaju/Telegram-AppImage/releases/download/continuous/Telegram_Desktop-x86_64.AppImage",
         "icon": "telegram",
