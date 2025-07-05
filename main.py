@@ -535,18 +535,18 @@ class AppImageShop(Gtk.Window):
     # Event Handlers
     def on_search_changed(self, entry):
         self.stack.set_visible_child_name("apps")
-        self.header_bar.set_subtitle("Aplicativos para XFCE")
+        self.header_bar.set_subtitle("Sua loja de AppImage - Desde 2025")
         self.refresh_app_list()
 
     def on_category_toggled(self, button, category):
         if button.get_active():
             self.stack.set_visible_child_name("apps")
-            self.header_bar.set_subtitle("Aplicativos para XFCE")
+            self.header_bar.set_subtitle("Sua loja de AppImage - Desde 2025")
             self.refresh_app_list()
 
     def on_refresh_clicked(self, button):
         self.stack.set_visible_child_name("apps")
-        self.header_bar.set_subtitle("Aplicativos para XFCE")
+        self.header_bar.set_subtitle("Sua loja de AppImage - Desde 2025")
         # Recarregar os dados do JSON externo ao clicar em atualizar
         self.load_apps_from_url() 
         self.refresh_app_list()
@@ -700,7 +700,7 @@ class AppImageShop(Gtk.Window):
             button.set_sensitive(False) # Desabilita o botão durante a remoção
             threading.Thread(target=self._remove_appimage, args=(name, button)).start()
             self.stack.set_visible_child_name("apps") # Voltar para a aba de apps
-            self.header_bar.set_subtitle("Aplicativos para XFCE")
+            self.header_bar.set_subtitle("Sua loja de AppImage - Desde 2025")
 
     def _download_and_install_appimage(self, url, name, button):
         """Função para baixar e instalar AppImage em uma thread separada."""
