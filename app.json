@@ -20,16 +20,5 @@
         "version": "Continuous",
         "details": "O Telegram é um serviço de mensagens instantâneas baseado na nuvem. O Telegram está disponível para smartphones ou tablets HarmonyOS, Android, iOS, Windows Phone, Ubuntu Touch, Firefox OS), computadores (Windows, OS X, GNU/Linux) e também como Aplicação web.",
         "screenshots": []
-    },
-        {
-        "name": "AppImageLauncher",
-        "description": "integração de AppImage ao seu sistema.",
-        "appimage_url": "https://github.com/TheAssassin/AppImageLauncher/releases/download/v2.2.0/appimagelauncher-lite-2.2.0-travis995-0f91801-x86_64.AppImage",
-        "icon": "appimagelauncher",
-        "category": "Utilitários",
-        "app": "Utilities",
-        "version": "2.2.0",
-        "details": "AppImageLauncher é uma solução nova e única de integração com o sistema. Ele intercepta todas as tentativas de abrir um AppImage para fornecer seus recursos de integração.",
-        "screenshots": []
     }
 ]
