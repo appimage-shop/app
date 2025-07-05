@@ -9,6 +9,8 @@
         "app": "Graphics",
         "version": "3.0.4",
         "details": "GIMP (GNU Image Manipulation Program) é um editor de imagens de código aberto para retocar fotos, composição de imagens e criação de arte.",
-        "screenshots": []
+        "screenshots": [
+            "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/gimp.png"
+        ]
     }
 ]
