@@ -1,0 +1,16 @@
+[
+    {
+        "name": "GIMP",
+        "description": "Editor de imagens e manipulação de fotos.",
+        "appimage_url": "https://edgeuno-bog2.mm.fcix.net/gimp/gimp/v3.0/linux/GIMP-3.0.4-x86_64.AppImage",
+        "icon_url": "https://www.gimp.org/images/frontpage/wilber-big.png",
+        "icon": "gimp",
+        "category": "Gráficos",
+        "app": "Graphics",
+        "version": "3.0.4",
+        "details": "GIMP (GNU Image Manipulation Program) é um editor de imagens de código aberto para retocar fotos, composição de imagens e criação de arte.",
+        "screenshots": [
+            "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/gimp.png"
+        ]
+    }
+]

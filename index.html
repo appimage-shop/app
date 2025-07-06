@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AppImages Shop</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Definindo as variáveis de cor baseadas no seu CSS GTK */
+        :root {
+            --primary-bg: #1E1E1E;
+            --secondary-bg: #2A2A2A;
+            --accent-color: #5E81AC;
+            --text-color: #D8DEE9;
+            --hover-color: #3B4252;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif; /* Usando Inter como solicitado */
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Estilos para a barra de rolagem */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--secondary-bg);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-color);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--hover-color);
+        }
+
+        .action-button {
+            background-color: var(--accent-color);
+            color: var(--text-color);
+            transition: background-color 0.2s;
+        }
+
+        .action-button:hover {
+            background-color: #4C6F8E; /* Um tom um pouco mais escuro do accent-color */
+        }
+
+        .feature-card {
+            background-color: var(--secondary-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .code-block {
+            background-color: #2D2D2D;
+            color: #D8DEE9;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-secondary-bg p-6 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-text-color">AppImages Shop</h1>
+            <nav>
+                <ul class="flex space-x-6">
+                    <li><a href="#features" class="text-text-color hover:text-accent-color transition">Recursos</a></li>
+                    <li><a href="#download" class="text-text-color hover:text-accent-color transition">Download</a></li>
+                    <li><a href="#dependencies-install" class="text-text-color hover:text-accent-color transition">Dependências</a></li>
+                    <li><a href="#contact" class="text-text-color hover:text-accent-color transition">Contato</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <section class="bg-primary-bg py-20 text-center flex-1 flex items-center justify-center">
+        <div class="container mx-auto px-4">
+            <h2 class="text-5xl font-extrabold mb-6 text-text-color leading-tight">
+                Descubra e Instale Seus Aplicativos Favoritos
+            </h2>
+            <p class="text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
+                A Xfce Store é a sua porta de entrada para um universo de aplicativos AppImage,
+                projetada para ser intuitiva, rápida e segura.
+            </p>
+            <a href="#download" class="action-button inline-flex items-center px-8 py-4 rounded-full text-lg font-semibold shadow-lg transform hover:scale-105 transition-all duration-300">
+                <i class="fas fa-download mr-3"></i> Baixar AppImages Shop
+            </a>
+        </div>
+    </section>
+
+    <section id="features" class="bg-secondary-bg py-16">
+        <div class="container mx-auto px-4">
+            <h2 class="text-4xl font-bold text-center mb-12 text-text-color">Recursos Principais</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="feature-card text-center">
+                    <i class="fas fa-rocket text-accent-color text-5xl mb-4"></i>
+                    <h3 class="text-2xl font-semibold mb-3 text-text-color">Instalação Simplificada</h3>
+                    <p class="text-gray-300">Instale aplicativos AppImage com apenas um clique, sem complicações.</p>
+                </div>
+                <div class="feature-card text-center">
+                    <i class="fas fa-sync-alt text-accent-color text-5xl mb-4"></i>
+                    <h3 class="text-2xl font-semibold mb-3 text-text-color">Atualizações Automáticas</h3>
+                    <p class="text-gray-300">Mantenha seus aplicativos sempre atualizados com nosso sistema inteligente.</p>
+                </div>
+                <div class="feature-card text-center">
+                    <i class="fas fa-desktop text-accent-color text-5xl mb-4"></i>
+                    <h3 class="text-2xl font-semibold mb-3 text-text-color">Integração com o Desktop</h3>
+                    <p class="text-gray-300">Adicione atalhos dos seus aplicativos diretamente ao seu ambiente de trabalho.</p>
+                </div>
+                <div class="feature-card text-center">
+                    <i class="fas fa-tags text-accent-color text-5xl mb-4"></i>
+                    <h3 class="text-2xl font-semibold mb-3 text-text-color">Categorias e Pesquisa</h3>
+                    <p class="text-gray-300">Encontre facilmente o que você precisa com categorias e uma pesquisa eficiente.</p>
+                </div>
+                <div class="feature-card text-center">
+                    <i class="fas fa-shield-alt text-accent-color text-5xl mb-4"></i>
+                    <h3 class="text-2xl font-semibold mb-3 text-text-color">Segurança e Confiabilidade</h3>
+                    <p class="text-gray-300">Baixe aplicativos de fontes confiáveis com segurança garantida.</p>
+                </div>
+                <div class="feature-card text-center">
+                    <i class="fas fa-hand-holding-box text-accent-color text-5xl mb-4"></i>
+                    <h3 class="text-2xl font-semibold mb-3 text-text-color">Gerenciamento Completo</h3>
+                    <p class="text-gray-300">Gerencie todos os seus AppImages instalados em um só lugar.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="download" class="bg-primary-bg py-16 text-center">
+        <div class="container mx-auto px-4">
+            <h2 class="text-4xl font-bold mb-8 text-text-color">Pronto para Começar?</h2>
+            <p class="text-xl text-gray-300 mb-8">
+                Baixe a AppImages Shop agora e comece a explorar o mundo dos AppImages!
+            </p>
+            <a href="https://drive.google.com/file/d/1JFKkMFbI_ypwz-3rGf80Zi3ZdbHppB0M/view?usp=drive_link" download class="action-button inline-flex items-center px-10 py-5 rounded-full text-xl font-semibold shadow-lg transform hover:scale-105 transition-all duration-300">
+                <i class="fas fa-cloud-download-alt mr-4"></i> Baixar
+            </a>
+            <p class="text-gray-400 text-sm mt-4">Compatível com a maioria das distribuições Linux.</p>
+            <p class="text-gray-400 text-sm mt-2">
+                Para que a AppImages Shop funcione corretamente, você precisa instalar algumas dependências.
+                Consulte a seção <a href="#dependencies-install" class="text-accent-color hover:underline">Dependências</a> para mais detalhes.
+            </p>
+        </div>
+    </section>
+
+    <section id="dependencies-install" class="bg-secondary-bg py-16">
+        <div class="container mx-auto px-4">
+            <h2 class="text-4xl font-bold text-center mb-12 text-text-color">Instalação de Dependências</h2>
+            <p class="text-lg text-gray-300 mb-8 max-w-2xl mx-auto text-center">
+                A AppImages Shop requer **PyGObject** (para a interface GTK+) e a biblioteca **Requests** para buscar o catálogo de aplicativos. Utilize os comandos abaixo para sua distribuição.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+                <div class="feature-card">
+                    <h4 class="text-xl font-semibold mb-3 text-text-color"><i class="fab fa-debian mr-2"></i> Debian/Ubuntu/Mint</h4>
+                    <p class="text-gray-300 mb-4">Abra um terminal e execute:</p>
+                    <div class="code-block mb-4">
+                        <pre><code>sudo apt update</code></pre>
+                    </div>
+                    <div class="code-block">
+                        <pre><code>sudo apt install python3-gi python3-requests gir1.2-gtk-3.0</code></pre>
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <h4 class="text-xl font-semibold mb-3 text-text-color"><i class="fab fa-fedora mr-2"></i> Fedora/CentOS/RHEL</h4>
+                    <p class="text-gray-300 mb-4">Abra um terminal e execute:</p>
+                    <div class="code-block">
+                        <pre><code>sudo dnf install python3-gobject python3-requests gtk3</code></pre>
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <h4 class="text-xl font-semibold mb-3 text-text-color"><i class="fas fa-archway mr-2"></i> Arch Linux</h4>
+                    <p class="text-gray-300 mb-4">Abra um terminal e execute:</p>
+                    <div class="code-block">
+                        <pre><code>sudo pacman -S python-gobject python-requests gtk3</code></pre>
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <h4 class="text-xl font-semibold mb-3 text-text-color"><i class="fab fa-suse mr-2"></i> openSUSE</h4>
+                    <p class="text-gray-300 mb-4">Abra um terminal e execute:</p>
+                    <div class="code-block">
+                        <pre><code>sudo zypper install python3-gobject python3-requests gtk3</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" class="bg-primary-bg py-16">
+        <div class="container mx-auto px-4 text-center">
+            <h2 class="text-4xl font-bold mb-8 text-text-color">Fale Conosco</h2>
+            <p class="text-lg text-gray-300 mb-8 max-w-xl mx-auto">
+                Tem alguma dúvida, sugestão ou precisa de suporte? Entre em contato conosco.
+            </p>
+            <p class="text-xl text-accent-color font-semibold">
+                appimage.shop@gmail.com
+            </p>
+            <div class="flex justify-center space-x-6 mt-8 text-3xl">
+                <a href="https://github.com/appimage-shop" class="text-gray-400 hover:text-accent-color transition"><i class="fab fa-github"></i></a>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-primary-bg py-6 text-center text-gray-500 text-sm">
+        <div class="container mx-auto px-4">
+             Desenvolvido por Mateus Gonçalves, Feito com ❤️
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>
