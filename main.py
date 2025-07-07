@@ -12,8 +12,8 @@ import configparser
 from urllib.parse import quote
 from datetime import datetime
 
-# URL para os dados JSON de AppImage
-APPS_DATA_URL = "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/app.json"
+# URL padrão para os dados JSON de AppImage
+DEFAULT_APPS_DATA_URL = "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/app.json"
 # URL para o ícone da aplicação
 APP_ICON_URL = "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/icon.png"
 
@@ -34,6 +34,7 @@ class AppImageShop(Gtk.Window):
         self.config = configparser.ConfigParser()
         self.load_config()
         self.appimage_dir = self.config.get('Downloads', 'appimage_dir')
+        self.apps_data_url = self.config.get('Downloads', 'apps_data_url')
         self.icon_dir = os.path.expanduser("~/.local/share/AppImageShop/icons")
         os.makedirs(self.appimage_dir, exist_ok=True)
         os.makedirs(self.icon_dir, exist_ok=True)
@@ -83,7 +84,8 @@ class AppImageShop(Gtk.Window):
             'Settings': {'auto_refresh': 'True', 'last_tab': '0', 'last_category': 'Todos'},
             'Accessibility': {'high_contrast': 'False', 'font_scale': '1.0'},
             'Appearance': {'theme': 'Sistema'},
-            'Downloads': {'appimage_dir': os.path.expanduser("~/.local/bin/AppImages")}
+            'Downloads': {'appimage_dir': os.path.expanduser("~/.local/bin/AppImages"),
+                         'apps_data_url': DEFAULT_APPS_DATA_URL}
         }
         if os.path.exists(self.config_file):
             self.config.read(self.config_file)
@@ -106,12 +108,12 @@ class AppImageShop(Gtk.Window):
         """Redefine configuração para valores padrão."""
         self.load_config()  # Recarrega padrões
         self.appimage_dir = self.config['Downloads']['appimage_dir']
+        self.apps_data_url = self.config['Downloads']['apps_data_url']
         os.makedirs(self.appimage_dir, exist_ok=True)
         self._apply_css()
         self.refresh_app_list()
         self.refresh_downloads_list()
 
-    # Gerenciamento de Histórico de Downloads
     def load_download_history(self):
         """Carrega histórico de downloads do downloads.json."""
         try:
@@ -141,7 +143,6 @@ class AppImageShop(Gtk.Window):
         })
         self.save_download_history()
 
-    # Estilização da UI
     def _apply_css(self):
         """Aplica estilos CSS com base na configuração."""
         high_contrast = self.config.getboolean('Accessibility', 'high_contrast')
@@ -194,6 +195,7 @@ class AppImageShop(Gtk.Window):
         .download-row {{ padding: 25px; margin-bottom: 12px; border-radius: 12px; border: {'2px solid #FFFFFF' if high_contrast else '1px solid @borders'}; background-color: {c['base']}; }}
         progressbar {{ min-height: 35px; border-radius: 8px; }}
         progressbar trough {{ background-color: {'#333333' if high_contrast else f"alpha({c['fg']}, 0.2)"}; }}
+孔子
         progressbar progress {{ background-color: {c['sel_bg']}; }}
         .settings-dialog {{ padding: 20px; background-color: {c['base']}; border-radius: 12px; }}
         .settings-label {{ font-weight: bold; font-size: {1.2 * font_scale}em; margin-bottom: 10px; color: {c['fg']}; }}
@@ -204,7 +206,6 @@ class AppImageShop(Gtk.Window):
         css_provider.load_from_data(css.encode())
         Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
-    # Configuração da UI
     def _setup_ui(self):
         """Configura o layout principal e widgets da UI."""
         self.main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -337,9 +338,8 @@ class AppImageShop(Gtk.Window):
 
         return downloads_box
 
-    # Carregamento de Dados
     def load_apps_from_url(self):
-        """Carrega aplicativos da URL JSON externa de forma assíncrona."""
+        """Carrega aplicativos da URL JSON configurada de forma assíncrona."""
         self.header_bar.set_subtitle("Carregando aplicativos...")
         spinner = Gtk.Spinner()
         spinner.start()
@@ -347,7 +347,7 @@ class AppImageShop(Gtk.Window):
 
         def load_async():
             try:
-                with urllib.request.urlopen(APPS_DATA_URL) as url:
+                with urllib.request.urlopen(self.apps_data_url) as url:
                     data = json.loads(url.read().decode())
                     GLib.idle_add(self._update_apps, data)
             except urllib.error.URLError as e:
@@ -384,7 +384,6 @@ class AppImageShop(Gtk.Window):
             self.sidebar.pack_start(button, False, False, 0)
         self.sidebar.show_all()
 
-    # Atualizações da UI
     def refresh_app_list(self):
         """Atualiza a lista de aplicativos com base em filtros de busca e categoria."""
         for child in self.flow_box.get_children():
@@ -499,7 +498,6 @@ class AppImageShop(Gtk.Window):
 
         self.downloads_list.add(row)
 
-    # Manipulação de Ícones e Capturas de Tela
     def get_custom_icon(self, app):
         """Carrega ou busca um ícone de aplicativo de forma assíncrona."""
         icon = Gtk.Image.new_from_icon_name("application-x-executable", Gtk.IconSize.DIALOG)
@@ -547,7 +545,6 @@ class AppImageShop(Gtk.Window):
         threading.Thread(target=load_screenshot_async, daemon=True).start()
         return image
 
-    # Manipuladores de Eventos
     def on_search_changed(self, entry):
         """Manipula mudanças no campo de busca."""
         self.notebook.set_current_page(0)
@@ -662,6 +659,13 @@ class AppImageShop(Gtk.Window):
         downloads_grid.attach(appimage_dir_label, 0, 0, 1, 1)
         downloads_grid.attach(appimage_dir_chooser, 1, 0, 1, 1)
 
+        apps_data_url_label = Gtk.Label(label="URL do JSON de Aplicativos", halign=Gtk.Align.START)
+        apps_data_url_label.get_style_context().add_class("settings-label")
+        apps_data_url_entry = Gtk.Entry(text=self.config.get('Downloads', 'apps_data_url'))
+        apps_data_url_entry.set_placeholder_text("Insira a URL do arquivo app.json")
+        downloads_grid.attach(apps_data_url_label, 0, 1, 1, 1)
+        downloads_grid.attach(apps_data_url_entry, 1, 1, 1, 1)
+
         notebook.append_page(downloads_box, Gtk.Label(label="Downloads"))
 
         # Aba Geral
@@ -702,13 +706,16 @@ class AppImageShop(Gtk.Window):
                 self.config['Accessibility']['font_scale'] = str(font_scale_spin.get_value())
                 self.config['Appearance']['theme'] = theme_combo.get_active_text()
                 self.config['Downloads']['appimage_dir'] = appimage_dir_chooser.get_filename()
+                self.config['Downloads']['apps_data_url'] = apps_data_url_entry.get_text() or DEFAULT_APPS_DATA_URL
                 self.config['Settings']['auto_refresh'] = str(auto_refresh_switch.get_active())
                 self.save_config()
                 self.appimage_dir = self.config['Downloads']['appimage_dir']
+                self.apps_data_url = self.config['Downloads']['apps_data_url']
                 os.makedirs(self.appimage_dir, exist_ok=True)
                 self._apply_css()
                 self.refresh_app_list()
                 self.refresh_downloads_list()
+                self.load_apps_from_url()  # Recarrega aplicativos com a nova URL
             confirm_dialog.destroy()
         dialog.destroy()
 
