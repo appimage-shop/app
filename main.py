@@ -891,7 +891,7 @@ Exec={appimage_path} %U
 Type=Application
 Icon={os.path.join(self.icon_dir, f"{quote(name)}.png")}
 Terminal=false
-Categories={app_data['category']};
+Categories={app_data['app']};
 Comment=Versão: {app_data['version']}"""
             desktop_path = os.path.expanduser(f"~/.local/share/applications/{name}.desktop")
             with open(desktop_path, 'w') as f:
