@@ -1,6 +1,6 @@
 import gi
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, Gdk, Gio, GLib, Pango
+from gi.repository import Gtk, Gdk, Gio, GLib, Pango, GdkPixbuf
 import os
 import threading
 import urllib.request
@@ -8,304 +8,211 @@ import json
 import shutil
 import time
 import subprocess
+import configparser
+from urllib.parse import quote
+from datetime import datetime
 
-# URL do seu arquivo JSON hospedado no GitHub (substitua esta URL pela sua!)
-APPS_DATA_URL = "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/app.json" 
+# URL para os dados JSON de AppImage
+APPS_DATA_URL = "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/app.json"
+# URL para o ícone da aplicação
+APP_ICON_URL = "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/icon.png"
 
 class AppImageShop(Gtk.Window):
+    """Janela principal do AppImage Shop."""
     def __init__(self):
         super().__init__(title="AppImage Shop")
         self.set_default_size(1200, 900)
         self.set_border_width(0)
 
-        # Diretório para AppImages
-        self.appimage_dir = os.path.expanduser("~/.local/bin/AppImages")
+        # Diretórios para configuração, downloads e ícones
+        self.config_dir = os.path.expanduser("~/.local/share/AppImageShop")
+        self.config_file = os.path.join(self.config_dir, "config.ini")
+        self.downloads_file = os.path.join(self.config_dir, "downloads.json")
+        os.makedirs(self.config_dir, exist_ok=True)
+
+        # Inicializa configuração e diretórios
+        self.config = configparser.ConfigParser()
+        self.load_config()
+        self.appimage_dir = self.config.get('Downloads', 'appimage_dir')
+        self.icon_dir = os.path.expanduser("~/.local/share/AppImageShop/icons")
         os.makedirs(self.appimage_dir, exist_ok=True)
+        os.makedirs(self.icon_dir, exist_ok=True)
 
-        # Carregar dados de aplicativos da URL externa
-        self.apps = [] # Inicializa vazio
-        self.load_apps_from_url() # Chama a função para carregar os dados
+        # Define o ícone da janela
+        self.set_app_icon()
 
-        # Lista para rastrear downloads
-        self.downloads = {} # {app_name: {"progress": float, "status": str}}
+        # Gerencia downloads e histórico
+        self.downloads = {}  # Downloads ativos
+        self.download_threads = {}  # Threads para downloads ativos
+        self.download_history = self.load_download_history()
+        self.apps = []  # Lista de aplicativos disponíveis
 
-        # Estilo CSS para a interface
+        # Aplica CSS e configura UI
         self._apply_css()
-
-        # Configuração da UI
         self._setup_ui()
+
+        # Carrega aplicativos se auto_refresh estiver habilitado
+        if self.config.getboolean('Settings', 'auto_refresh'):
+            self.load_apps_from_url()
+
+    def set_app_icon(self):
+        """Define o ícone da janela, baixando de APP_ICON_URL se necessário."""
+        icon_path = os.path.join(self.icon_dir, "appimage-shop.png")
+        if os.path.exists(icon_path):
+            try:
+                self.set_icon_from_file(icon_path)
+            except Exception as e:
+                print(f"Erro ao carregar ícone da aplicação: {e}")
+                self.set_icon_name("software-install")
+        else:
+            def load_icon_async():
+                try:
+                    urllib.request.urlretrieve(APP_ICON_URL, icon_path)
+                    GLib.idle_add(lambda: self.set_icon_from_file(icon_path))
+                except Exception as e:
+                    print(f"Erro ao baixar ícone da aplicação: {e}")
+                    GLib.idle_add(lambda: self.set_icon_name("software-install"))
+
+            threading.Thread(target=load_icon_async, daemon=True).start()
+            self.set_icon_name("software-install")  # Fallback até o download ser concluído
+
+    # Gerenciamento de Configuração
+    def load_config(self):
+        """Carrega configuração do config.ini com valores padrão."""
+        defaults = {
+            'Settings': {'auto_refresh': 'True', 'last_tab': '0', 'last_category': 'Todos'},
+            'Accessibility': {'high_contrast': 'False', 'font_scale': '1.0'},
+            'Appearance': {'theme': 'Sistema'},
+            'Downloads': {'appimage_dir': os.path.expanduser("~/.local/bin/AppImages")}
+        }
+        if os.path.exists(self.config_file):
+            self.config.read(self.config_file)
+        for section, options in defaults.items():
+            if section not in self.config:
+                self.config[section] = {}
+            for key, value in options.items():
+                self.config[section].setdefault(key, value)
+        # Valida tema
+        if self.config['Appearance']['theme'] not in ['Claro', 'Escuro', 'Sistema']:
+            self.config['Appearance']['theme'] = 'Sistema'
+            self.save_config()
+
+    def save_config(self):
+        """Salva configuração no config.ini."""
+        with open(self.config_file, 'w') as configfile:
+            self.config.write(configfile)
+
+    def reset_config(self):
+        """Redefine configuração para valores padrão."""
+        self.load_config()  # Recarrega padrões
+        self.appimage_dir = self.config['Downloads']['appimage_dir']
+        os.makedirs(self.appimage_dir, exist_ok=True)
+        self._apply_css()
         self.refresh_app_list()
+        self.refresh_downloads_list()
 
+    # Gerenciamento de Histórico de Downloads
+    def load_download_history(self):
+        """Carrega histórico de downloads do downloads.json."""
+        try:
+            if os.path.exists(self.downloads_file):
+                with open(self.downloads_file, 'r') as f:
+                    return json.load(f)
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"Erro ao carregar histórico de downloads: {e}")
+        return []
+
+    def save_download_history(self):
+        """Salva histórico de downloads no downloads.json."""
+        try:
+            with open(self.downloads_file, 'w') as f:
+                json.dump(self.download_history, f, indent=2)
+        except IOError as e:
+            print(f"Erro ao salvar histórico de downloads: {e}")
+
+    def update_download_history(self, app_name, info):
+        """Atualiza histórico de downloads com uma nova entrada ou atualizada."""
+        self.download_history = [entry for entry in self.download_history if entry["name"] != app_name]
+        self.download_history.append({
+            "name": app_name,
+            "progress": info["progress"],
+            "status": info["status"],
+            "timestamp": info.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        })
+        self.save_download_history()
+
+    # Estilização da UI
     def _apply_css(self):
-        """Aplica estilos CSS para uma interface minimalista e coesa com o tema."""
-        css = """
-        /* Estilos Gerais para a Janela */
-        window {
-            background-color: @theme_bg_color; /* Cor de fundo principal do tema */
-            color: @theme_text_color;
-        }
+        """Aplica estilos CSS com base na configuração."""
+        high_contrast = self.config.getboolean('Accessibility', 'high_contrast')
+        font_scale = self.config.getfloat('Accessibility', 'font_scale')
+        theme = self.config.get('Appearance', 'theme')
 
-        /* Header Bar */
-        headerbar {
-            /* Removido background-color, color e border-bottom para seguir o tema do sistema */
-            /* background-color: @theme_selected_bg_color; */
-            /* color: @theme_selected_fg_color; */
-            /* border-bottom: 1px solid @borders; */
+        # Cores baseadas no tema
+        colors = {
+            'Claro': {'bg': '#FFFFFF', 'fg': '#000000', 'base': '#F5F5F5', 'sel_bg': '#268BD2', 'sel_fg': '#FFFFFF'},
+            'Escuro': {'bg': '#2E2E2E', 'fg': '#FFFFFF', 'base': '#3C3C3C', 'sel_bg': '#4A90D9', 'sel_fg': '#FFFFFF'},
+            'Sistema': {'bg': '@theme_bg_color', 'fg': '@theme_fg_color', 'base': '@theme_base_color',
+                       'sel_bg': '@theme_selected_bg_color', 'sel_fg': '@theme_selected_fg_color'}
         }
-        headerbar .title {
-            font-weight: bold;
-            color: @theme_selected_fg_color;
-        }
-        headerbar .subtitle {
-            color: alpha(@theme_selected_fg_color, 0.8);
-        }
+        c = colors.get(theme, colors['Sistema'])
+        if high_contrast:
+            c = {'bg': '#000000', 'fg': '#FFFFFF', 'base': '#1A1A1A', 'sel_bg': '#FFFFFF', 'sel_fg': '#000000'}
 
-        /* Sidebar (Barra Lateral) */
-        .sidebar {
-            background-color: @theme_base_color; /* Cor de fundo para superfícies mais elevadas */
-            border-right: 1px solid @borders;
-            padding: 15px 0;
-        }
-        .sidebar-title {
-            font-size: 1.2em;
-            font-weight: bold;
-            margin-bottom: 15px;
-            margin-left: 20px;
-            color: @theme_text_color;
-        }
-
-        /* Categorias na Sidebar */
-        .category-button {
-            padding: 10px 20px;
-            margin: 2px 10px; /* Margem lateral para espaçamento */
-            border-radius: 6px;
-            font-size: 1.0em;
-            background-color: transparent;
-            color: @theme_text_color;
-            border: none;
-        }
-        .category-button:hover {
-            background-color: alpha(@theme_selected_bg_color, 0.1); /* Um leve destaque ao passar o mouse */
-        }
-        .category-button:checked {
-            background-color: @theme_selected_bg_color;
-            color: @theme_selected_fg_color;
-            font-weight: bold;
-        }
-        .category-frame {
-            border: none; /* Remover borda do frame para minimalismo */
-            background-color: transparent;
-            padding: 0;
-        }
-
-        /* Barra de Pesquisa */
-        searchentry {
-            padding: 8px 12px;
-            border-radius: 8px;
-            border: 1px solid @borders;
-            background-color: @theme_base_color;
-            color: @theme_text_color;
-            font-size: 1.0em;
-        }
-        searchentry:focus {
-            border-color: @theme_selected_bg_color;
-        }
-
-        /* FlowBox (Cards de Aplicativos) */
-        flowboxchild {
-            background-color: @theme_base_color;
-            border: 1px solid @borders;
-            border-radius: 10px;
-            padding: 15px;
-            margin: 10px;
-            box-shadow: none; /* Remover sombra padrão para um look mais flat */
-            transition: all 0.2s ease-in-out;
-        }
-        flowboxchild:hover {
-            background-color: alpha(@theme_selected_bg_color, 0.1); /* Leve realce no hover */
-            border-color: @theme_selected_bg_color;
-        }
-        flowboxchild:selected {
-            background-color: alpha(@theme_selected_bg_color, 0.2);
-            border-color: @theme_selected_bg_color;
-        }
-        .app-card {
-            /* min-width e max-width foram movidos para set_size_request() em Python */
-        }
-        .app-card .title {
-            font-size: 1.1em;
-            font-weight: bold;
-            color: @theme_text_color;
-        }
-        .app-card .description {
-            font-size: 0.9em;
-            color: alpha(@theme_text_color, 0.8);
-            margin-top: 5px;
-        }
-        .app-card .version {
-            font-size: 0.85em;
-            color: alpha(@theme_text_color, 0.7);
-        }
-
-        /* Botões de Ação (Instalar/Remover) */
-        button {
-            padding: 8px 15px;
-            border-radius: 6px;
-            font-weight: bold;
-            transition: all 0.2s ease-in-out;
-            border: 1px solid @borders;
-        }
-        button.suggested-action {
-            background-color: @theme_selected_bg_color;
-            color: @theme_selected_fg_color;
-            border-color: @theme_selected_bg_color;
-        }
-        button.suggested-action:hover {
-            background-color: shade(@theme_selected_bg_color, 0.9); /* Ligeriamente mais escuro */
-            border-color: shade(@theme_selected_bg_color, 0.9);
-        }
-        button.destructive-action {
-            background-color: @error_bg_color;
-            color: @error_fg_color;
-            border-color: @error_bg_color;
-        }
-        button.destructive-action:hover {
-            background-color: shade(@error_bg_color, 0.9);
-            border-color: shade(@error_bg_color, 0.9);
-        }
-        button:not(.suggested-action):not(.destructive-action) { /* Botões padrão */
-            background-color: @theme_bg_color;
-            color: @theme_text_color;
-        }
-        button:not(.suggested-action):not(.destructive-action):hover {
-            background-color: alpha(@theme_selected_bg_color, 0.1);
-        }
-
-        /* Stack Switcher (Abas) */
-        stackswitcher button {
-            padding: 10px 20px;
-            font-size: 1.0em;
-            border-radius: 8px;
-            background-color: @theme_bg_color;
-            color: @theme_text_color;
-            border: 1px solid @borders;
-        }
-        stackswitcher button:checked {
-            background-color: @theme_selected_bg_color;
-            color: @theme_selected_fg_color;
-            font-weight: bold;
-            border-color: @theme_selected_bg_color;
-        }
-        stackswitcher button:hover {
-            background-color: alpha(@theme_selected_bg_color, 0.1);
-        }
-
-        /* Seção de Detalhes do Aplicativo */
-        .details-view {
-            padding: 25px;
-            background-color: @theme_bg_color;
-            color: @theme_text_color;
-        }
-        .details-view .title {
-            font-size: 1.5em;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: @theme_text_color;
-        }
-        .details-label {
-            font-weight: bold;
-            color: @theme_text_color;
-            margin-bottom: 5px;
-        }
-        .details-text {
-            font-size: 0.95em;
-            color: alpha(@theme_text_color, 0.9);
-            margin-bottom: 15px;
-        }
-        .dim-label {
-            font-size: 0.85em;
-            color: alpha(@theme_text_color, 0.7);
-        }
-
-        /* Seção de Downloads */
-        .download-row {
-            padding: 15px 20px;
-            margin-bottom: 8px;
-            border-radius: 8px;
-            border: 1px solid @borders;
-            background-color: @theme_base_color;
-        }
-        .download-row .title {
-            font-size: 1.1em;
-            font-weight: bold;
-            color: @theme_text_color;
-        }
-        progressbar {
-            min-height: 25px; /* Altura mínima para a barra de progresso */
-        }
-        progressbar trough {
-            border-radius: 5px;
-            background-color: alpha(@theme_text_color, 0.1);
-        }
-        progressbar progress {
-            border-radius: 5px;
-            background-color: @theme_selected_bg_color;
-        }
-        progressbar text {
-            color: @theme_selected_fg_color;
-            font-weight: bold;
-        }
-
-        /* Diálogos (Notificações, Confirmações) */
-        .dialog {
-            border-radius: 10px;
-            background-color: @theme_bg_color;
-            color: @theme_text_color;
-            border: 1px solid @borders;
-            box-shadow: 0 4px 10px alpha(black, 0.2);
-        }
-        .dialog label {
-            color: @theme_text_color;
-        }
+        css = f"""
+        window {{ background-color: {c['bg']}; color: {c['fg']}; font-size: {font_scale * 100}%; }}
+        headerbar {{ background-color: {c['base']}; padding: 10px 14px; box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15); }}
+        headerbar .title {{ font-size: {1.4 * font_scale}em; font-weight: bold; }}
+        .sidebar {{ background-color: {c['base']}; border-right: 2px solid {'#FFFFFF' if high_contrast else '@borders'}; padding: 25px 0; }}
+        .sidebar-title {{ font-size: {1.4 * font_scale}em; font-weight: bold; margin: 0 0 25px 25px; }}
+        .category-button {{ padding: 14px 30px; margin: 6px 15px; border-radius: 10px; font-size: {1.15 * font_scale}em;
+                           border: {'2px solid #FFFFFF' if high_contrast else 'none'}; }}
+        .category-button:hover {{ background-color: {('#333333' if high_contrast else f"alpha({c['sel_bg']}, 0.2)")}; }}
+        .category-button:checked {{ background-color: {c['sel_bg']}; color: {c['sel_fg']}; font-weight: bold; }}
+        searchentry {{ padding: 12px 18px; border-radius: 12px; border: {'2px solid #FFFFFF' if high_contrast else '1px solid @borders'}; background-color: {c['base']}; font-size: {1.15 * font_scale}em; }}
+        searchentry:focus {{ border-color: {c['sel_bg']}; }}
+        flowboxchild {{ background-color: {c['base']}; border: {'2px solid #FFFFFF' if high_contrast else '1px solid @borders'}; border-radius: 14px; padding: 25px; margin: 15px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); }}
+        flowboxchild:hover {{ box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); }}
+        .app-card .title {{ font-size: {1.3 * font_scale}em; font-weight: bold; margin-bottom: 10px; }}
+        .app-card .description {{ font-size: {1.0 * font_scale}em; margin: 10px 0; }}
+        .app-card .version {{ font-size: {0.95 * font_scale}em; opacity: 0.85; }}
+        .app-card .update-badge {{ background-color: {c['sel_bg']}; color: {c['sel_fg']}; font-size: {0.9 * font_scale}em; padding: 8px 12px; border-radius: 16px; margin-top: 10px; }}
+        .app-card .empty-state {{ font-size: {1.2 * font_scale}em; opacity: 0.8; padding: 30px; }}
+        button {{ padding: 12px 24px; border-radius: 10px; font-weight: bold; border: {'2px solid #FFFFFF' if high_contrast else '1px solid @borders'}; }}
+        button.suggested-action {{ background-color: {c['sel_bg']}; color: {c['sel_fg']}; }}
+        button.suggested-action:hover {{ background-color: {'#CCCCCC' if high_contrast else f"shade({c['sel_bg']}, 0.9)"}; }}
+        button.destructive-action {{ background-color: {'#FF0000' if high_contrast else '@error_bg_color'}; color: {'#FFFFFF' if high_contrast else '@error_fg_color'}; }}
+        button.destructive-action:hover {{ background-color: {'#CC0000' if high_contrast else 'shade(@error_bg_color, 0.9)'}; }}
+        notebook {{ background-color: {c['bg']}; border: {'2px solid #FFFFFF' if high_contrast else '1px solid @borders'}; border-radius: 12px; padding: 8px; }}
+        notebook tab {{ padding: 12px 24px; font-size: {1.15 * font_scale}em; border-radius: 12px 12px 0 0; }}
+        notebook tab:checked {{ background-color: {c['sel_bg']}; color: {c['sel_fg']}; }}
+        .details-view {{ padding: 20px; background-color: {c['bg']}; }}
+        .details-view .title {{ font-size: {1.8 * font_scale}em; font-weight: bold; margin-bottom: 10px; }}
+        .details-label {{ font-weight: bold; margin-bottom: 5px; }}
+        .details-text {{ font-size: {1.1 * font_scale}em; margin-bottom: 10px; }}
+        .screenshot-image {{ border: {'2px solid #FFFFFF' if high_contrast else '1px solid @borders'}; border-radius: 10px; margin: 10px; }}
+        .download-row {{ padding: 25px; margin-bottom: 12px; border-radius: 12px; border: {'2px solid #FFFFFF' if high_contrast else '1px solid @borders'}; background-color: {c['base']}; }}
+        progressbar {{ min-height: 35px; border-radius: 8px; }}
+        progressbar trough {{ background-color: {'#333333' if high_contrast else f"alpha({c['fg']}, 0.2)"}; }}
+        progressbar progress {{ background-color: {c['sel_bg']}; }}
+        .settings-dialog {{ padding: 20px; background-color: {c['base']}; border-radius: 12px; }}
+        .settings-label {{ font-weight: bold; font-size: {1.2 * font_scale}em; margin-bottom: 10px; color: {c['fg']}; }}
+        .settings-notebook tab {{ padding: 10px 20px; font-size: {1.1 * font_scale}em; border-radius: 8px 8px 0 0; }}
+        .settings-notebook tab:checked {{ background-color: {c['sel_bg']}; color: {c['sel_fg']}; }}
         """
         css_provider = Gtk.CssProvider()
         css_provider.load_from_data(css.encode())
-        Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(),
-            css_provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        )
+        Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
-    def load_apps_from_url(self):
-        """Carrega a lista de aplicativos de uma URL externa."""
-        try:
-            with urllib.request.urlopen(APPS_DATA_URL) as url:
-                data = json.loads(url.read().decode())
-                self.apps = data
-            print("Dados de aplicativos carregados com sucesso da URL.")
-        except urllib.error.URLError as e:
-            print(f"Erro ao carregar dados da URL: {e.reason}. Usando lista vazia.")
-            GLib.idle_add(self.show_notification, "Erro ao carregar lista de aplicativos. Verifique sua conexão ou a URL.")
-            self.apps = [] # Fallback para lista vazia em caso de erro
-        except json.JSONDecodeError as e:
-            print(f"Erro ao decodificar JSON da URL: {e}. Usando lista vazia.")
-            GLib.idle_add(self.show_notification, "Erro ao processar dados de aplicativos. O formato pode estar incorreto.")
-            self.apps = []
-        except Exception as e:
-            print(f"Erro inesperado ao carregar dados: {e}. Usando lista vazia.")
-            GLib.idle_add(self.show_notification, f"Erro inesperado: {e}")
-            self.apps = []
-
+    # Configuração da UI
     def _setup_ui(self):
-        """Configura todos os widgets e o layout principal da interface."""
-        self.main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        """Configura o layout principal e widgets da UI."""
+        self.main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.add(self.main_box)
 
-        # Header Bar
-        self.header_bar = Gtk.HeaderBar()
+        # Barra de Cabeçalho
+        self.header_bar = Gtk.HeaderBar(title="AppImage Shop", subtitle="Sua Loja de AppImage - Desde 2025")
         self.header_bar.set_show_close_button(True)
-        self.header_bar.set_title("AppImage Shop")
-        self.header_bar.set_subtitle("Sua loja de AppImage - Desde 2025")
         self.set_titlebar(self.header_bar)
 
         refresh_button = Gtk.Button.new_from_icon_name("view-refresh", Gtk.IconSize.BUTTON)
@@ -313,520 +220,757 @@ class AppImageShop(Gtk.Window):
         refresh_button.connect("clicked", self.on_refresh_clicked)
         self.header_bar.pack_start(refresh_button)
 
-        # Sidebar
-        self.sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        self.sidebar.set_size_request(200, -1) # Largura fixa para a sidebar
+        settings_button = Gtk.Button.new_from_icon_name("preferences-system", Gtk.IconSize.BUTTON)
+        settings_button.set_tooltip_text("Abrir configurações")
+        settings_button.connect("clicked", self.on_settings_clicked)
+        self.header_bar.pack_end(settings_button)
+
+        # Barra Lateral
+        self.sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        self.sidebar.set_size_request(220, -1)
         self.sidebar.get_style_context().add_class("sidebar")
         self.main_box.pack_start(self.sidebar, False, False, 0)
 
-        sidebar_title = Gtk.Label(label="<b>Categorias</b>")
-        sidebar_title.set_use_markup(True)
-        sidebar_title.set_halign(Gtk.Align.START)
+        sidebar_title = Gtk.Label(label="<b>Categorias</b>", use_markup=True)
         sidebar_title.get_style_context().add_class("sidebar-title")
-        self.sidebar.pack_start(sidebar_title, False, False, 10)
+        self.sidebar.pack_start(sidebar_title, False, False, 12)
 
         self.category_group = None
         self.category_buttons = {}
-        all_button = Gtk.RadioButton.new_with_label(None, "Todas")
-        all_button.set_tooltip_text("Mostrar todos os aplicativos")
-        all_button.connect("toggled", self.on_category_toggled, "Todas")
+        all_button = Gtk.RadioButton.new_with_label(None, "Todos")
+        all_button.connect("toggled", self.on_category_toggled, "Todos")
         all_button.get_style_context().add_class("category-button")
         self.sidebar.pack_start(all_button, False, False, 0)
         self.category_group = all_button
-        self.category_buttons["Todas"] = all_button
+        self.category_buttons["Todos"] = all_button
+
+        # Área de Conteúdo Principal
+        self.content_area = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
+        self.main_box.pack_start(self.content_area, True, True, 0)
+
+        self.notebook = Gtk.Notebook(margin_top=20)
+        self.notebook.connect("switch-page", self.on_notebook_page_switched)
+        self.content_area.pack_start(self.notebook, True, True, 0)
+
+        self.store_box = self._create_store_view()
+        self.notebook.append_page(self.store_box, Gtk.Label(label="Loja"))
+
+        self.my_apps_box = self._create_my_apps_view()
+        self.notebook.append_page(self.my_apps_box, Gtk.Label(label="Meus Apps"))
+
+        self.downloads_box = self._create_downloads_view()
+        self.notebook.append_page(self.downloads_box, Gtk.Label(label="Downloads"))
+
+    def _create_store_view(self):
+        """Cria a visão da loja com busca e cartões de aplicativos."""
+        store_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
+        self.store_stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
+        store_box.pack_start(self.store_stack, True, True, 0)
+
+        apps_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
+        search_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12, margin=25)
+        apps_box.pack_start(search_box, False, False, 0)
+
+        self.search_entry = Gtk.Entry(placeholder_text="Pesquisar aplicativos...")
+        self.search_entry.connect("changed", self.on_search_changed)
+        completion = Gtk.EntryCompletion()
+        completion.set_model(self._create_completion_model())
+        completion.set_text_column(0)
+        self.search_entry.set_completion(completion)
+        search_box.pack_start(self.search_entry, True, True, 0)
+
+        clear_button = Gtk.Button.new_from_icon_name("edit-clear", Gtk.IconSize.BUTTON)
+        clear_button.set_tooltip_text("Limpar busca")
+        clear_button.connect("clicked", lambda btn: self.search_entry.set_text(""))
+        search_box.pack_start(clear_button, False, False, 0)
+
+        self.flow_box = Gtk.FlowBox(valign=Gtk.Align.START, max_children_per_line=5, min_children_per_line=2,
+                                    column_spacing=25, row_spacing=25, selection_mode=Gtk.SelectionMode.SINGLE)
+        self.flow_box.connect("child-activated", self.on_app_selected)
+        scrolled_window = Gtk.ScrolledWindow(margin_start=25, margin_end=25, margin_bottom=25)
+        scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        scrolled_window.add(self.flow_box)
+        apps_box.pack_start(scrolled_window, True, True, 0)
+
+        self.store_stack.add_named(apps_box, "apps")
+        return store_box
+
+    def _create_my_apps_view(self):
+        """Cria a visão para aplicativos instalados."""
+        my_apps_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
+        self.my_apps_stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
+        my_apps_box.pack_start(self.my_apps_stack, True, True, 0)
+
+        list_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=25, margin=20)
+        header = Gtk.Label(label="<b>Aplicativos Instalados</b>", use_markup=True)
+        list_box.pack_start(header, False, False, 0)
+
+        self.installed_flow_box = Gtk.FlowBox(valign=Gtk.Align.START, max_children_per_line=5, min_children_per_line=2,
+                                             column_spacing=25, row_spacing=25, selection_mode=Gtk.SelectionMode.SINGLE)
+        self.installed_flow_box.connect("child-activated", self.on_app_selected)
+        scrolled = Gtk.ScrolledWindow(margin=15)
+        scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        scrolled.add(self.installed_flow_box)
+        list_box.pack_start(scrolled, True, True, 0)
+
+        self.my_apps_stack.add_named(list_box, "list")
+        return my_apps_box
+
+    def _create_downloads_view(self):
+        """Cria a visão de downloads com histórico e botão de limpar."""
+        downloads_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
+        header_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=15, margin_start=25, margin_top=20)
+        title = Gtk.Label(label="<b>Downloads</b>", use_markup=True)
+        header_box.pack_start(title, False, False, 0)
+
+        clear_button = Gtk.Button(label="Limpar Histórico")
+        clear_button.set_tooltip_text("Limpar histórico de downloads")
+        clear_button.connect("clicked", self.on_clear_history_clicked)
+        header_box.pack_end(clear_button, False, False, 0)
+        downloads_box.pack_start(header_box, False, False, 0)
+
+        self.downloads_list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
+        scrolled = Gtk.ScrolledWindow(margin_start=25, margin_end=25, margin_bottom=25)
+        scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        scrolled.add(self.downloads_list)
+        downloads_box.pack_start(scrolled, True, True, 0)
+
+        return downloads_box
+
+    # Carregamento de Dados
+    def load_apps_from_url(self):
+        """Carrega aplicativos da URL JSON externa de forma assíncrona."""
+        self.header_bar.set_subtitle("Carregando aplicativos...")
+        spinner = Gtk.Spinner()
+        spinner.start()
+        self.header_bar.pack_start(spinner)
+
+        def load_async():
+            try:
+                with urllib.request.urlopen(APPS_DATA_URL) as url:
+                    data = json.loads(url.read().decode())
+                    GLib.idle_add(self._update_apps, data)
+            except urllib.error.URLError as e:
+                GLib.idle_add(self.show_error_dialog, f"Falha ao carregar aplicativos: {e.reason}", True)
+            except json.JSONDecodeError as e:
+                GLib.idle_add(self.show_error_dialog, f"Dados de aplicativo inválidos: {e}", False)
+            finally:
+                GLib.idle_add(spinner.stop)
+                GLib.idle_add(self.header_bar.remove, spinner)
+                GLib.idle_add(self.header_bar.set_subtitle, "Sua Loja de AppImage - Desde 2025")
+
+        threading.Thread(target=load_async, daemon=True).start()
+
+    def _update_apps(self, data):
+        """Atualiza a lista de aplicativos e a UI."""
+        self.apps = data
+        self._setup_category_buttons()
+        self.refresh_app_list()
+        self.notebook.set_current_page(self.config.getint('Settings', 'last_tab'))
+
+    def _setup_category_buttons(self):
+        """Configura botões de categoria na barra lateral."""
+        for category, button in list(self.category_buttons.items()):
+            if category != "Todos":
+                self.sidebar.remove(button)
+                del self.category_buttons[category]
 
         categories = sorted(set(app["category"] for app in self.apps))
         for category in categories:
             button = Gtk.RadioButton.new_with_label_from_widget(self.category_group, category)
-            button.set_tooltip_text(f"Filtrar por {category}")
             button.connect("toggled", self.on_category_toggled, category)
             button.get_style_context().add_class("category-button")
             self.category_buttons[category] = button
             self.sidebar.pack_start(button, False, False, 0)
+        self.sidebar.show_all()
 
-        # Main Content Area (Stack for different views)
-        self.content_area = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
-        self.main_box.pack_start(self.content_area, True, True, 0)
-
-        self.stack_switcher = Gtk.StackSwitcher()
-        self.stack_switcher.set_halign(Gtk.Align.CENTER)
-        self.stack_switcher.set_margin_top(15)
-        self.stack_switcher.get_style_context().add_class("stack-switcher")
-        self.content_area.pack_start(self.stack_switcher, False, False, 0)
-
-        self.stack = Gtk.Stack()
-        self.stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
-        self.stack_switcher.set_stack(self.stack)
-        self.content_area.pack_start(self.stack, True, True, 0)
-
-        # Applications View
-        self._create_applications_view()
-
-        # Downloads View
-        self._create_downloads_view()
-
-        # Accelerator Group (for keyboard shortcuts)
-        accel_group = Gtk.AccelGroup()
-        self.add_accel_group(accel_group)
-        self.flow_box.add_accelerator(
-            "child-activated", accel_group, Gdk.KEY_Return, 0, Gtk.AccelFlags.VISIBLE
-        )
-
-    def _create_applications_view(self):
-        """Cria a view principal para exibir os aplicativos."""
-        apps_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
-        self.stack.add_titled(apps_box, "apps", "Aplicativos")
-
-        # Search Bar
-        search_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        search_box.set_margin_start(20)
-        search_box.set_margin_end(20)
-        search_box.set_margin_top(15)
-        apps_box.pack_start(search_box, False, False, 0)
-
-        self.search_entry = Gtk.SearchEntry(placeholder_text="Pesquisar aplicativos...")
-        self.search_entry.set_hexpand(True)
-        self.search_entry.connect("search-changed", self.on_search_changed)
-        search_box.pack_start(self.search_entry, True, True, 0)
-
-        clear_button = Gtk.Button.new_from_icon_name("edit-clear", Gtk.IconSize.BUTTON)
-        clear_button.set_tooltip_text("Limpar pesquisa")
-        clear_button.connect("clicked", lambda btn: self.search_entry.set_text(""))
-        search_box.pack_start(clear_button, False, False, 0)
-
-        # FlowBox for app cards
-        self.flow_box = Gtk.FlowBox()
-        self.flow_box.set_valign(Gtk.Align.START)
-        self.flow_box.set_max_children_per_line(5) # Ajuste para mais cards por linha se a janela permitir
-        self.flow_box.set_min_children_per_line(2)
-        self.flow_box.set_column_spacing(15)
-        self.flow_box.set_row_spacing(15)
-        self.flow_box.set_selection_mode(Gtk.SelectionMode.SINGLE)
-        self.flow_box.set_activate_on_single_click(True)
-        self.flow_box.connect("child-activated", self.on_app_selected)
-
-        scrolled_window = Gtk.ScrolledWindow()
-        scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        scrolled_window.set_margin_start(20)
-        scrolled_window.set_margin_end(20)
-        scrolled_window.set_margin_bottom(20)
-        scrolled_window.add(self.flow_box)
-        apps_box.pack_start(scrolled_window, True, True, 0)
-
-    def _create_downloads_view(self):
-        """Cria a view para exibir o progresso dos downloads."""
-        downloads_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
-        self.stack.add_titled(downloads_box, "downloads", "Downloads")
-
-        downloads_title = Gtk.Label(label="<b>Downloads Ativos</b>")
-        downloads_title.set_use_markup(True)
-        downloads_title.set_halign(Gtk.Align.START)
-        downloads_title.get_style_context().add_class("section-title")
-        downloads_title.set_margin_start(20)
-        downloads_title.set_margin_top(15)
-        downloads_box.pack_start(downloads_title, False, False, 0)
-
-        self.downloads_list = Gtk.ListBox()
-        self.downloads_list.set_selection_mode(Gtk.SelectionMode.NONE)
-        
-        downloads_scrolled = Gtk.ScrolledWindow()
-        downloads_scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        downloads_scrolled.set_margin_start(20)
-        downloads_scrolled.set_margin_end(20)
-        downloads_scrolled.set_margin_bottom(20)
-        downloads_scrolled.add(self.downloads_list)
-        downloads_box.pack_start(downloads_scrolled, True, True, 0)
-
-
+    # Atualizações da UI
     def refresh_app_list(self):
-        """Atualiza a lista de aplicativos exibidos no FlowBox com base em filtros."""
+        """Atualiza a lista de aplicativos com base em filtros de busca e categoria."""
         for child in self.flow_box.get_children():
             self.flow_box.remove(child)
 
         search_text = self.search_entry.get_text().lower()
-        selected_category = next((cat for cat, btn in self.category_buttons.items() if btn.get_active()), "Todas")
+        selected_category = next((cat for cat, btn in self.category_buttons.items() if btn.get_active()), "Todos")
 
         for app in self.apps:
-            matches_category = (selected_category == "Todas" or app["category"] == selected_category)
-            matches_search = (not search_text or search_text in app["name"].lower() or search_text in app["description"].lower())
-
-            if matches_category and matches_search:
-                self._create_app_card(app)
+            if (selected_category == "Todos" or app["category"] == selected_category) and \
+               (not search_text or search_text in app["name"].lower() or search_text in app["description"].lower()):
+                self._create_app_card(app, self.flow_box)
 
         self.flow_box.show_all()
+        self.refresh_my_apps_list()
 
-    def _create_app_card(self, app):
-        """Cria um widget de card individual para um aplicativo."""
-        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        card.get_style_context().add_class("app-card")
-        card.set_halign(Gtk.Align.CENTER) # Centraliza conteúdo no card
-        card.set_size_request(200, -1) # Define uma largura preferencial de 200px para o card
+    def refresh_my_apps_list(self):
+        """Atualiza a lista de aplicativos instalados."""
+        self.my_apps_stack.set_visible_child_name("list")
+        for child in self.installed_flow_box.get_children():
+            self.installed_flow_box.remove(child)
 
-        icon = Gtk.Image.new_from_icon_name(app["icon"], Gtk.IconSize.DIALOG)
-        icon.set_margin_top(5)
-        card.pack_start(icon, False, False, 0)
-
-        name_label = Gtk.Label(label=app['name'])
-        name_label.set_halign(Gtk.Align.CENTER)
-        name_label.set_ellipsize(Pango.EllipsizeMode.END)
-        name_label.get_style_context().add_class("title")
-        card.pack_start(name_label, False, False, 0)
-
-        version_label = Gtk.Label(label=f"v{app['version']}")
-        version_label.set_halign(Gtk.Align.CENTER)
-        version_label.get_style_context().add_class("version")
-        card.pack_start(version_label, False, False, 0)
-
-        desc_label = Gtk.Label(label=app["description"])
-        desc_label.set_line_wrap(True)
-        desc_label.set_justify(Gtk.Justification.CENTER)
-        desc_label.set_max_width_chars(30)
-        desc_label.set_halign(Gtk.Align.CENTER)
-        desc_label.get_style_context().add_class("description")
-        card.pack_start(desc_label, True, True, 5) # Expande para preencher espaço
-
-        self.flow_box.add(card)
+        installed_apps = [app for app in self.apps if os.path.exists(os.path.join(self.appimage_dir, f"{app['name']}.AppImage"))]
+        if not installed_apps:
+            empty_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
+            empty_box.get_style_context().add_class("app-card")
+            empty_icon = Gtk.Image.new_from_icon_name("dialog-information", Gtk.IconSize.DIALOG)
+            empty_label = Gtk.Label(label="Nenhum aplicativo instalado.")
+            explore_button = Gtk.Button(label="Explorar Loja")
+            explore_button.set_tooltip_text("Voltar para a aba Loja")
+            explore_button.connect("clicked", lambda btn: self.notebook.set_current_page(0))
+            empty_box.pack_start(empty_icon, False, False, 0)
+            empty_box.pack_start(empty_label, False, False, 0)
+            empty_box.pack_start(explore_button, False, False, 0)
+            self.installed_flow_box.add(empty_box)
+        else:
+            for app in installed_apps:
+                appimage_path = os.path.join(self.appimage_dir, f"{app['name']}.AppImage")
+                desktop_path = os.path.expanduser(f"~/.local/share/applications/{app['name']}.desktop")
+                is_update = False
+                if os.path.exists(desktop_path):
+                    with open(desktop_path, 'r') as f:
+                        installed_version = next((line.split("Versão:")[1].strip() for line in f if line.startswith("Comment=Versão:")), app['version'])
+                        is_update = installed_version != app['version']
+                self._create_app_card(app, self.installed_flow_box, is_update)
+        self.installed_flow_box.show_all()
 
     def refresh_downloads_list(self):
-        """Atualiza a lista de downloads na view de downloads."""
+        """Atualiza a lista de downloads com downloads ativos e histórico."""
         for child in self.downloads_list.get_children():
             self.downloads_list.remove(child)
 
-        if not self.downloads:
-            no_downloads_label = Gtk.Label(label="Nenhum download em andamento.")
-            no_downloads_label.get_style_context().add_class("dim-label")
-            row = Gtk.ListBoxRow()
-            row.add(no_downloads_label)
-            self.downloads_list.add(row)
+        all_downloads = {**{entry["name"]: entry for entry in self.download_history}, **self.downloads}
+        if not all_downloads:
+            self.downloads_list.add(Gtk.Label(label="Nenhum download no histórico."))
         else:
-            for app_name, info in self.downloads.items():
-                self._create_download_row(app_name, info)
+            for app_name in sorted(all_downloads, key=lambda x: all_downloads[x]["timestamp"], reverse=True):
+                self._create_download_row(app_name, all_downloads[app_name])
         self.downloads_list.show_all()
 
+    def _create_app_card(self, app, flow_box, is_update=False):
+        """Cria um cartão de aplicativo."""
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        card.get_style_context().add_class("app-card")
+        card.set_size_request(260, -1)
+
+        icon = self.get_custom_icon(app)
+        card.pack_start(icon, False, False, 0)
+
+        name_label = Gtk.Label(label=app['name'], halign=Gtk.Align.CENTER, ellipsize=Pango.EllipsizeMode.END)
+        name_label.get_style_context().add_class("title")
+        card.pack_start(name_label, False, False, 0)
+
+        version_label = Gtk.Label(label=f"v{app.get('version', 'N/A')}", halign=Gtk.Align.CENTER)
+        version_label.get_style_context().add_class("version")
+        card.pack_start(version_label, False, False, 0)
+
+        if is_update:
+            update_badge = Gtk.Label(label="Atualização Disponível")
+            update_badge.get_style_context().add_class("update-badge")
+            card.pack_start(update_badge, False, False, 0)
+
+        desc_label = Gtk.Label(label=app.get("description", "Sem descrição"), wrap=True, justify=Gtk.Justification.CENTER, max_width_chars=35)
+        desc_label.get_style_context().add_class("description")
+        card.pack_start(desc_label, True, True, 6)
+
+        flow_box.add(card)
+
     def _create_download_row(self, app_name, info):
-        """Cria uma linha para exibir o progresso de um download."""
+        """Cria uma linha de progresso de download."""
         row = Gtk.ListBoxRow()
         row.get_style_context().add_class("download-row")
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=15)
-        box.set_margin_top(5)
-        box.set_margin_bottom(5)
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=20, margin=6)
         row.add(box)
 
-        name_label = Gtk.Label(label=app_name)
-        name_label.set_halign(Gtk.Align.START)
-        name_label.set_hexpand(True)
+        status_icon = Gtk.Image.new_from_icon_name("dialog-error" if "Erro" in info["status"] else "emblem-downloads", Gtk.IconSize.BUTTON)
+        box.pack_start(status_icon, False, False, 0)
+
+        name_label = Gtk.Label(label=app_name, halign=Gtk.Align.START, hexpand=True)
         name_label.get_style_context().add_class("title")
         box.pack_start(name_label, True, True, 0)
 
-        progress_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
-        progress_box.set_hexpand(True) # Para a barra de progresso ocupar espaço
-        
-        progress_bar = Gtk.ProgressBar()
-        progress_bar.set_show_text(True)
-        progress_bar.set_text(info["status"])
-        progress_bar.set_fraction(info["progress"])
-        progress_bar.set_halign(Gtk.Align.FILL)
-        progress_bar.set_hexpand(True)
-        progress_box.pack_start(progress_bar, True, True, 0)
+        status_text = info["status"].replace("Downloading", "Baixando").replace("Completed", "Concluído").replace("Error", "Erro").replace("Canceling", "Cancelando").replace("Canceled", "Cancelado")
+        progress_bar = Gtk.ProgressBar(show_text=True, text=f"{status_text} ({info['timestamp']})", fraction=info["progress"])
+        box.pack_start(progress_bar, True, True, 0)
 
-        box.pack_start(progress_box, True, True, 0)
+        if app_name in self.download_threads:
+            cancel_button = Gtk.Button.new_from_icon_name("process-stop", Gtk.IconSize.BUTTON)
+            cancel_button.set_tooltip_text("Cancelar download")
+            cancel_button.connect("clicked", self.on_cancel_download, app_name)
+            box.pack_end(cancel_button, False, False, 0)
+
         self.downloads_list.add(row)
 
-    # Event Handlers
+    # Manipulação de Ícones e Capturas de Tela
+    def get_custom_icon(self, app):
+        """Carrega ou busca um ícone de aplicativo de forma assíncrona."""
+        icon = Gtk.Image.new_from_icon_name("application-x-executable", Gtk.IconSize.DIALOG)
+        icon_url = app.get("icon_url")
+        if not icon_url:
+            return icon
+
+        icon_path = os.path.join(self.icon_dir, f"{quote(app['name'])}.png")
+        if os.path.exists(icon_path):
+            try:
+                icon.set_from_pixbuf(GdkPixbuf.Pixbuf.new_from_file_at_size(icon_path, 64, 64))
+            except Exception as e:
+                print(f"Erro ao carregar ícone para {app['name']}: {e}")
+            return icon
+
+        def load_icon_async():
+            try:
+                urllib.request.urlretrieve(icon_url, icon_path)
+                GLib.idle_add(lambda: icon.set_from_pixbuf(GdkPixbuf.Pixbuf.new_from_file_at_size(icon_path, 64, 64)))
+            except Exception as e:
+                print(f"Erro ao baixar ícone para {app['name']}: {e}")
+
+        threading.Thread(target=load_icon_async, daemon=True).start()
+        return icon
+
+    def get_screenshot_image(self, screenshot_url, app_name):
+        """Carrega ou busca uma captura de tela de forma assíncrona."""
+        image = Gtk.Image.new_from_icon_name("image-x-generic", Gtk.IconSize.DIALOG)
+
+        screenshot_path = os.path.join(self.icon_dir, f"{quote(app_name)}_screenshot_{quote(screenshot_url.split('/')[-1])}")
+        if os.path.exists(screenshot_path):
+            try:
+                image.set_from_pixbuf(GdkPixbuf.Pixbuf.new_from_file_at_size(screenshot_path, 400, 300))
+            except Exception as e:
+                print(f"Erro ao carregar captura de tela para {app_name}: {e}")
+            return image
+
+        def load_screenshot_async():
+            try:
+                urllib.request.urlretrieve(screenshot_url, screenshot_path)
+                GLib.idle_add(lambda: image.set_from_pixbuf(GdkPixbuf.Pixbuf.new_from_file_at_size(screenshot_path, 400, 300)))
+            except Exception as e:
+                print(f"Erro ao baixar captura de tela para {app_name}: {e}")
+
+        threading.Thread(target=load_screenshot_async, daemon=True).start()
+        return image
+
+    # Manipuladores de Eventos
     def on_search_changed(self, entry):
-        self.stack.set_visible_child_name("apps")
-        self.header_bar.set_subtitle("Sua loja de AppImage - Desde 2025")
+        """Manipula mudanças no campo de busca."""
+        self.notebook.set_current_page(0)
+        self.store_stack.set_visible_child_name("apps")
+        self.header_bar.set_subtitle("Sua Loja de AppImage - Desde 2025")
         self.refresh_app_list()
 
     def on_category_toggled(self, button, category):
+        """Manipula seleção de categoria."""
         if button.get_active():
-            self.stack.set_visible_child_name("apps")
-            self.header_bar.set_subtitle("Sua loja de AppImage - Desde 2025")
+            self.notebook.set_current_page(0)
+            self.store_stack.set_visible_child_name("apps")
+            self.header_bar.set_subtitle("Sua Loja de AppImage - Desde 2025")
+            self.config['Settings']['last_category'] = category
+            self.save_config()
             self.refresh_app_list()
 
     def on_refresh_clicked(self, button):
-        self.stack.set_visible_child_name("apps")
-        self.header_bar.set_subtitle("Sua loja de AppImage - Desde 2025")
-        # Recarregar os dados do JSON externo ao clicar em atualizar
-        self.load_apps_from_url() 
-        self.refresh_app_list()
+        """Manipula clique no botão de atualizar."""
+        self.notebook.set_current_page(0)
+        self.store_stack.set_visible_child_name("apps")
+        self.header_bar.set_subtitle("Sua Loja de AppImage - Desde 2025")
+        self.load_apps_from_url()
+
+    def on_notebook_page_switched(self, notebook, page, page_num):
+        """Salva a aba selecionada do notebook."""
+        self.config['Settings']['last_tab'] = str(page_num)
+        self.save_config()
+
+    def on_clear_history_clicked(self, button):
+        """Limpa o histórico de downloads."""
+        self.download_history = []
+        self.downloads.clear()
+        self.download_threads.clear()
+        self.save_download_history()
         self.refresh_downloads_list()
 
+    def on_cancel_download(self, button, app_name):
+        """Cancela um download ativo."""
+        button.set_sensitive(False)
+        spinner = Gtk.Spinner()
+        spinner.start()
+        button.add(spinner)
+        if app_name in self.download_threads:
+            self.download_threads[app_name].cancelled = True
+            self.downloads[app_name]["status"] = "Cancelando..."
+            self.downloads[app_name]["progress"] = 0.0
+            self.refresh_downloads_list()
+            GLib.timeout_add(500, self._complete_cancel, app_name, button, spinner)
+
+    def _complete_cancel(self, app_name, button, spinner):
+        """Conclui o cancelamento de um download."""
+        self.downloads[app_name]["status"] = "Cancelado"
+        self.downloads[app_name]["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.update_download_history(app_name, self.downloads[app_name])
+        self.refresh_downloads_list()
+        button.remove(spinner)
+        button.set_sensitive(True)
+        del self.download_threads[app_name]
+        self.show_notification(f"Download de {app_name} cancelado.")
+        return False
+
+    def on_settings_clicked(self, button):
+        """Abre o diálogo de configurações."""
+        dialog = Gtk.Dialog(title="Configurações", transient_for=self, flags=0)
+        dialog.set_default_size(500, 400)
+        dialog.add_buttons("Cancelar", Gtk.ResponseType.CANCEL, "Aplicar", Gtk.ResponseType.APPLY)
+        content_area = dialog.get_content_area()
+        content_area.set_border_width(20)
+
+        notebook = Gtk.Notebook()
+        content_area.add(notebook)
+
+        # Aba de Acessibilidade
+        accessibility_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15, margin=20)
+        accessibility_grid = Gtk.Grid(column_spacing=15, row_spacing=15)
+        accessibility_box.pack_start(accessibility_grid, False, False, 0)
+
+        high_contrast_label = Gtk.Label(label="Alto Contraste", halign=Gtk.Align.START)
+        high_contrast_label.get_style_context().add_class("settings-label")
+        high_contrast_switch = Gtk.Switch(halign=Gtk.Align.END, active=self.config.getboolean('Accessibility', 'high_contrast'))
+        accessibility_grid.attach(high_contrast_label, 0, 0, 1, 1)
+        accessibility_grid.attach(high_contrast_switch, 1, 0, 1, 1)
+
+        font_scale_label = Gtk.Label(label="Escala de Fonte", halign=Gtk.Align.START)
+        font_scale_label.get_style_context().add_class("settings-label")
+        font_scale_spin = Gtk.SpinButton(adjustment=Gtk.Adjustment(value=self.config.getfloat('Accessibility', 'font_scale'), lower=0.8, upper=1.5, step_increment=0.1), digits=1)
+        font_scale_spin.set_tooltip_text("Definir tamanho da fonte (0.8 a 1.5)")
+        accessibility_grid.attach(font_scale_label, 0, 1, 1, 1)
+        accessibility_grid.attach(font_scale_spin, 1, 1, 1, 1)
+
+        theme_label = Gtk.Label(label="Tema", halign=Gtk.Align.START)
+        theme_label.get_style_context().add_class("settings-label")
+        theme_combo = Gtk.ComboBoxText()
+        for theme in ["Claro", "Escuro", "Sistema"]:
+            theme_combo.append_text(theme)
+        theme_combo.set_active(['Claro', 'Escuro', 'Sistema'].index(self.config.get('Appearance', 'theme')))
+        accessibility_grid.attach(theme_label, 0, 2, 1, 1)
+        accessibility_grid.attach(theme_combo, 1, 2, 1, 1)
+
+        notebook.append_page(accessibility_box, Gtk.Label(label="Acessibilidade"))
+
+        # Aba de Downloads
+        downloads_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15, margin=20)
+        downloads_grid = Gtk.Grid(column_spacing=15, row_spacing=15)
+        downloads_box.pack_start(downloads_grid, False, False, 0)
+
+        appimage_dir_label = Gtk.Label(label="Diretório de AppImage", halign=Gtk.Align.START)
+        appimage_dir_label.get_style_context().add_class("settings-label")
+        appimage_dir_chooser = Gtk.FileChooserButton(title="Selecionar Diretório de AppImage", action=Gtk.FileChooserAction.SELECT_FOLDER)
+        appimage_dir_chooser.set_filename(self.config.get('Downloads', 'appimage_dir'))
+        downloads_grid.attach(appimage_dir_label, 0, 0, 1, 1)
+        downloads_grid.attach(appimage_dir_chooser, 1, 0, 1, 1)
+
+        notebook.append_page(downloads_box, Gtk.Label(label="Downloads"))
+
+        # Aba Geral
+        general_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15, margin=20)
+        general_grid = Gtk.Grid(column_spacing=15, row_spacing=15)
+        general_box.pack_start(general_grid, False, False, 0)
+
+        auto_refresh_label = Gtk.Label(label="Atualização Automática", halign=Gtk.Align.START)
+        auto_refresh_label.get_style_context().add_class("settings-label")
+        auto_refresh_switch = Gtk.Switch(halign=Gtk.Align.END, active=self.config.getboolean('Settings', 'auto_refresh'))
+        general_grid.attach(auto_refresh_label, 0, 0, 1, 1)
+        general_grid.attach(auto_refresh_switch, 1, 0, 1, 1)
+
+        reset_button = Gtk.Button(label="Redefinir Configurações")
+        reset_button.get_style_context().add_class("destructive-action")
+        reset_button.set_tooltip_text("Redefinir todas as configurações para o padrão")
+        reset_button.connect("clicked", self.on_reset_settings_clicked)
+        general_grid.attach(reset_button, 1, 1, 1, 1)
+
+        notebook.append_page(general_box, Gtk.Label(label="Geral"))
+
+        # Aba Sobre
+        about_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15, margin=20)
+        about_label = Gtk.Label(
+            label="<b>AppImage Shop</b>\nUma loja para descobrir, baixar e gerenciar aplicativos AppImage.\n\n<b>Desenvolvedor:</b> Mateus Gonçalves",
+            use_markup=True, justify=Gtk.Justification.CENTER
+        )
+        about_label.get_style_context().add_class("settings-label")
+        about_box.pack_start(about_label, False, False, 0)
+        notebook.append_page(about_box, Gtk.Label(label="Sobre"))
+
+        dialog.show_all()
+        if dialog.run() == Gtk.ResponseType.APPLY:
+            confirm_dialog = Gtk.MessageDialog(transient_for=dialog, message_type=Gtk.MessageType.QUESTION,
+                                              buttons=Gtk.ButtonsType.YES_NO, text="Aplicar alterações?")
+            if confirm_dialog.run() == Gtk.ResponseType.YES:
+                self.config['Accessibility']['high_contrast'] = str(high_contrast_switch.get_active())
+                self.config['Accessibility']['font_scale'] = str(font_scale_spin.get_value())
+                self.config['Appearance']['theme'] = theme_combo.get_active_text()
+                self.config['Downloads']['appimage_dir'] = appimage_dir_chooser.get_filename()
+                self.config['Settings']['auto_refresh'] = str(auto_refresh_switch.get_active())
+                self.save_config()
+                self.appimage_dir = self.config['Downloads']['appimage_dir']
+                os.makedirs(self.appimage_dir, exist_ok=True)
+                self._apply_css()
+                self.refresh_app_list()
+                self.refresh_downloads_list()
+            confirm_dialog.destroy()
+        dialog.destroy()
+
+    def on_reset_settings_clicked(self, button):
+        """Manipula clique no botão de redefinir configurações."""
+        confirm_dialog = Gtk.MessageDialog(transient_for=button.get_toplevel(), message_type=Gtk.MessageType.WARNING,
+                                          buttons=Gtk.ButtonsType.YES_NO, text="Redefinir todas as configurações para o padrão?")
+        confirm_dialog.format_secondary_text("Isso não afetará aplicativos instalados ou histórico de downloads.")
+        if confirm_dialog.run() == Gtk.ResponseType.YES:
+            self.reset_config()
+            self.show_notification("Configurações redefinidas para o padrão.")
+        confirm_dialog.destroy()
+
     def on_app_selected(self, flowbox, child):
-        # Acessa o widget Gtk.Box dentro do FlowBoxChild
-        app_card_content = flowbox.get_child_at_index(child.get_index()).get_children()[0]
-        # O nome do aplicativo é o segundo Label dentro do Gtk.Box (índice 1, após o ícone)
-        name_label_widget = app_card_content.get_children()[1]
-        app_name = name_label_widget.get_label()
-        
+        """Manipula seleção de aplicativo no FlowBox."""
+        app_name = flowbox.get_child_at_index(child.get_index()).get_children()[0].get_children()[1].get_label()
         app = next((a for a in self.apps if a["name"] == app_name), None)
         if app:
-            self.show_app_details(app)
+            print(f"App selecionado: {app_name}, Detalhes: {app}")  # Depuração
+            if flowbox == self.installed_flow_box:
+                self.notebook.set_current_page(1)
+                self.show_app_details(app, self.my_apps_stack, "list", "Meus Apps")
+            else:
+                self.notebook.set_current_page(0)
+                self.show_app_details(app, self.store_stack, "apps", "Loja")
+        else:
+            print(f"Aplicativo não encontrado: {app_name}")  # Depuração
 
-    def show_app_details(self, app):
-        """Exibe a view de detalhes para um aplicativo específico."""
-        if self.stack.get_child_by_name("details"):
-            self.stack.remove(self.stack.get_child_by_name("details"))
+    def show_app_details(self, app, target_stack, back_view_name, tab_name):
+        """Exibe a visão detalhada do aplicativo."""
+        print(f"Exibindo detalhes para {app['name']} no stack {target_stack}, visão anterior: {back_view_name}")  # Depuração
+        details_name = f"details_{app['name']}"
+        if target_stack.get_child_by_name(details_name):
+            target_stack.remove(target_stack.get_child_by_name(details_name))
 
-        details_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
+        details_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         details_box.get_style_context().add_class("details-view")
-        self.stack.add_titled(details_box, "details", f"Detalhes: {app['name']}")
+        details_box.set_property("visible", True)
 
-        # Back button
         back_button = Gtk.Button.new_from_icon_name("go-previous", Gtk.IconSize.BUTTON)
-        back_button.set_tooltip_text("Voltar à lista de aplicativos")
-        back_button.connect("clicked", lambda btn: self.stack.set_visible_child_name("apps") or self.header_bar.set_subtitle("Aplicativos para XFCE"))
-        back_button.set_halign(Gtk.Align.START)
-        back_button.set_margin_start(20)
-        back_button.set_margin_top(15)
+        back_button.set_tooltip_text("Voltar para a lista")
+        back_button.connect("clicked", lambda btn: [target_stack.set_visible_child_name(back_view_name),
+                                                   self.header_bar.set_subtitle("Sua Loja de AppImage - Desde 2025")])
         details_box.pack_start(back_button, False, False, 0)
 
-        # Content area for details
-        content_grid = Gtk.Grid()
-        content_grid.set_column_spacing(25)
-        content_grid.set_row_spacing(10)
-        content_grid.set_margin_start(25)
-        content_grid.set_margin_end(25)
-        content_grid.set_margin_bottom(25)
+        content_grid = Gtk.Grid(column_spacing=20, row_spacing=10, margin=10)
+        content_grid.set_property("visible", True)
         details_box.pack_start(content_grid, True, True, 0)
 
-        # App Icon
-        icon = Gtk.Image.new_from_icon_name(app["icon"], Gtk.IconSize.DIALOG)
-        content_grid.attach(icon, 0, 0, 1, 3) # row, column, width, height
+        icon = self.get_custom_icon(app)
+        icon.set_property("visible", True)
+        content_grid.attach(icon, 0, 0, 1, 3)
 
-        # App Name
-        name_label = Gtk.Label(label=f"<b>{app['name']}</b>")
-        name_label.set_use_markup(True)
-        name_label.set_halign(Gtk.Align.START)
+        name_label = Gtk.Label(label=f"<b>{app['name']}</b>", use_markup=True, halign=Gtk.Align.START)
         name_label.get_style_context().add_class("title")
+        name_label.set_property("visible", True)
         content_grid.attach(name_label, 1, 0, 1, 1)
 
-        # Version
-        version_label = Gtk.Label(label=f"<span weight='bold'>Versão:</span> {app['version']}")
-        version_label.set_use_markup(True)
-        version_label.set_halign(Gtk.Align.START)
+        version_label = Gtk.Label(label=f"<span weight='bold'>Versão:</span> {app.get('version', 'N/A')}", use_markup=True, halign=Gtk.Align.START)
         version_label.get_style_context().add_class("details-text")
+        version_label.set_property("visible", True)
         content_grid.attach(version_label, 1, 1, 1, 1)
 
-        # Category
-        category_label = Gtk.Label(label=f"<span weight='bold'>Categoria:</span> {app['category']}")
-        category_label.set_use_markup(True)
-        category_label.set_halign(Gtk.Align.START)
+        category_label = Gtk.Label(label=f"<span weight='bold'>Categoria:</span> {app.get('category', 'N/A')}", use_markup=True, halign=Gtk.Align.START)
         category_label.get_style_context().add_class("details-text")
+        category_label.set_property("visible", True)
         content_grid.attach(category_label, 1, 2, 1, 1)
 
-        # Detailed Description
-        description_title = Gtk.Label(label="<b>Descrição</b>")
-        description_title.set_use_markup(True)
-        description_title.set_halign(Gtk.Align.START)
+        description_title = Gtk.Label(label="<b>Descrição</b>", use_markup=True, halign=Gtk.Align.START)
         description_title.get_style_context().add_class("details-label")
-        content_grid.attach(description_title, 0, 3, 2, 1) # Full width
+        description_title.set_property("visible", True)
+        content_grid.attach(description_title, 0, 3, 2, 1)
 
-        desc_label = Gtk.Label(label=app["details"])
-        desc_label.set_line_wrap(True)
-        desc_label.set_max_width_chars(80) # Adjust for better text flow
-        desc_label.set_halign(Gtk.Align.START)
+        desc_label = Gtk.Label(label=app.get("details", app.get("description", "Sem descrição disponível")), wrap=True, max_width_chars=90, halign=Gtk.Align.START)
         desc_label.get_style_context().add_class("details-text")
-        content_grid.attach(desc_label, 0, 4, 2, 1) # Full width
+        desc_label.set_property("visible", True)
+        content_grid.attach(desc_label, 0, 4, 2, 1)
 
-        # Screenshots (Placeholder)
-        screenshot_label = Gtk.Label(label="Capturas de tela: (Em breve)")
-        if app["screenshots"]: # Check if screenshots data exists
-             # TODO: Implement a proper image gallery here
-            screenshot_label.set_label("Capturas de tela (disponíveis em breve)")
-
-        screenshot_label.set_halign(Gtk.Align.START)
-        screenshot_label.get_style_context().add_class("dim-label")
+        screenshot_label = Gtk.Label(label="<b>Capturas de Tela</b>", use_markup=True, halign=Gtk.Align.START)
+        screenshot_label.get_style_context().add_class("details-label")
+        screenshot_label.set_property("visible", True)
         content_grid.attach(screenshot_label, 0, 5, 2, 1)
 
-        # Action Button (Install/Remove)
-        appimage_path = os.path.join(self.appimage_dir, f"{app['name']}.AppImage")
-        installed = os.path.exists(appimage_path)
-        
-        # This button is recreated each time details are shown, reflecting current state
-        self.action_button = Gtk.Button(label="Remover" if installed else "Instalar")
-        self.action_button.get_style_context().add_class("destructive-action" if installed else "suggested-action")
-        self.action_button.set_tooltip_text("Remover aplicativo" if installed else "Instalar aplicativo")
-        self.action_button.connect("clicked", self.on_action_clicked, app["name"], app["appimage_url"], installed)
-        self.action_button.set_halign(Gtk.Align.END) # Alinha o botão à direita
-        self.action_button.set_margin_end(20)
-        self.action_button.set_margin_bottom(15)
-        details_box.pack_end(self.action_button, False, False, 0) # Pack ao final do details_box
-
-
-        details_box.show_all()
-        self.stack.set_visible_child_name("details")
-        self.header_bar.set_subtitle(f"Detalhes: {app['name']}")
-
-    def on_action_clicked(self, button, name, url, installed_status):
-        """Manipulador para o clique do botão Instalar/Remover."""
-        if installed_status:
-            self.confirm_remove(name, button)
+        screenshots = app.get("screenshots", [])
+        if screenshots:
+            screenshot_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            screenshot_box.set_property("visible", True)
+            for screenshot_url in screenshots[:3]:
+                image = self.get_screenshot_image(screenshot_url, app["name"])
+                image.set_property("visible", True)
+                screenshot_box.pack_start(image, False, False, 0)
+            content_grid.attach(screenshot_box, 0, 6, 2, 1)
         else:
-            self.confirm_install(url, name, button)
+            screenshot_placeholder = Gtk.Image.new_from_icon_name("image-x-generic", Gtk.IconSize.DIALOG)
+            screenshot_placeholder.set_property("visible", True)
+            content_grid.attach(screenshot_placeholder, 0, 6, 2, 1)
 
-    def confirm_install(self, url, name, button):
-        """Exibe diálogo de confirmação para instalação."""
-        dialog = Gtk.MessageDialog(
-            transient_for=self,
-            flags=0,
-            message_type=Gtk.MessageType.QUESTION,
-            buttons=Gtk.ButtonsType.YES_NO,
-            text=f"Deseja instalar {name}?"
-        )
-        dialog.get_style_context().add_class("dialog")
-        response = dialog.run()
-        dialog.destroy()
-        if response == Gtk.ResponseType.YES:
-            button.set_sensitive(False) # Desabilita o botão durante o download
-            self.downloads[name] = {"progress": 0.0, "status": "Iniciando..."}
-            self.refresh_downloads_list()
-            self.stack.set_visible_child_name("downloads") # Mudar para a aba de downloads
-            threading.Thread(target=self._download_and_install_appimage, args=(url, name, button)).start()
+        appimage_path = os.path.join(self.appimage_dir, f"{app['name']}.AppImage")
+        button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10, halign=Gtk.Align.END, margin_end=10, margin_bottom=10)
+        button_box.set_property("visible", True)
+        details_box.pack_end(button_box, False, False, 0)
 
-    def confirm_remove(self, name, button):
-        """Exibe diálogo de confirmação para remoção."""
-        dialog = Gtk.MessageDialog(
-            transient_for=self,
-            flags=0,
-            message_type=Gtk.MessageType.QUESTION,
-            buttons=Gtk.ButtonsType.YES_NO,
-            text=f"Deseja remover {name}?"
-        )
-        dialog.get_style_context().add_class("dialog")
-        response = dialog.run()
-        dialog.destroy()
-        if response == Gtk.ResponseType.YES:
-            button.set_sensitive(False) # Desabilita o botão durante a remoção
-            threading.Thread(target=self._remove_appimage, args=(name, button)).start()
-            self.stack.set_visible_child_name("apps") # Voltar para a aba de apps
-            self.header_bar.set_subtitle("Sua loja de AppImage - Desde 2025")
+        self.action_button = Gtk.Button(label="Remover" if os.path.exists(appimage_path) else "Instalar")
+        self.action_button.get_style_context().add_class("destructive-action" if os.path.exists(appimage_path) else "suggested-action")
+        self.action_button.connect("clicked", self.on_action_clicked, app["name"], app.get("appimage_url", ""), os.path.exists(appimage_path))
+        self.action_button.set_property("visible", True)
+        button_box.pack_start(self.action_button, False, False, 0)
+
+        if os.path.exists(appimage_path):
+            launch_button = Gtk.Button(label="Iniciar")
+            launch_button.get_style_context().add_class("suggested-action")
+            launch_button.connect("clicked", self.on_launch_clicked, app["name"])
+            launch_button.set_property("visible", True)
+            button_box.pack_start(launch_button, False, False, 0)
+
+        target_stack.add_named(details_box, details_name)
+        target_stack.set_visible_child_name(details_name)
+        self.header_bar.set_subtitle(f"{app['name']} - Detalhes")
+        details_box.show_all()
+        print(f"Visão de detalhes definida para {details_name} na aba {tab_name}")  # Depuração
+
+    def on_launch_clicked(self, button, app_name):
+        """Inicia um aplicativo instalado."""
+        appimage_path = os.path.join(self.appimage_dir, f"{app_name}.AppImage")
+        try:
+            subprocess.Popen([appimage_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            self.show_notification(f"{app_name} iniciado.")
+        except Exception as e:
+            self.show_notification(f"Erro ao iniciar {app_name}: {e}")
+
+    def on_action_clicked(self, button, name, url, installed):
+        """Manipula clique no botão de instalar/remover."""
+        if installed:
+            dialog = Gtk.MessageDialog(transient_for=self, message_type=Gtk.MessageType.QUESTION,
+                                      buttons=Gtk.ButtonsType.YES_NO, text=f"Remover {name}?")
+            if dialog.run() == Gtk.ResponseType.YES:
+                button.set_sensitive(False)
+                threading.Thread(target=self._remove_appimage, args=(name, button), daemon=True).start()
+                self.store_stack.set_visible_child_name("apps")
+                self.my_apps_stack.set_visible_child_name("list")
+                self.notebook.set_current_page(0)
+                self.header_bar.set_subtitle("Sua Loja de AppImage - Desde 2025")
+            dialog.destroy()
+        else:
+            if not url:
+                self.show_notification(f"Nenhuma URL de download disponível para {name}.")
+                return
+            dialog = Gtk.MessageDialog(transient_for=self, message_type=Gtk.MessageType.QUESTION,
+                                      buttons=Gtk.ButtonsType.YES_NO, text=f"Instalar {name}?")
+            if dialog.run() == Gtk.ResponseType.YES:
+                button.set_sensitive(False)
+                self.downloads[name] = {"progress": 0.0, "status": "Iniciando...", "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+                self.update_download_history(name, self.downloads[name])
+                self.refresh_downloads_list()
+                self.notebook.set_current_page(2)
+                thread = threading.Thread(target=self._download_and_install_appimage, args=(url, name, button), daemon=True)
+                thread.cancelled = False
+                self.download_threads[name] = thread
+                thread.start()
+            dialog.destroy()
 
     def _download_and_install_appimage(self, url, name, button):
-        """Função para baixar e instalar AppImage em uma thread separada."""
+        """Baixa e instala um AppImage."""
+        appimage_path = os.path.join(self.appimage_dir, f"{name}.AppImage")
         try:
-            appimage_path = os.path.join(self.appimage_dir, f"{name}.AppImage")
-
             def report_hook(block_num, block_size, total_size):
-                downloaded = block_num * block_size
-                if total_size > 0:
-                    fraction = min(downloaded / total_size, 1.0)
-                    GLib.idle_add(self._update_download_progress, name, fraction, f"Baixando: {int(fraction * 100)}%")
-                else:
-                    GLib.idle_add(self._update_download_progress, name, 0.0, "Baixando...")
+                if hasattr(self.download_threads[name], 'cancelled') and self.download_threads[name].cancelled:
+                    raise Exception("Download cancelado pelo usuário")
+                fraction = min(block_num * block_size / total_size, 1.0) if total_size > 0 else 0.0
+                status = f"Baixando: {int(fraction * 100)}%" if total_size > 0 else "Baixando..."
+                GLib.idle_add(self._update_download_progress, name, fraction, status)
 
             urllib.request.urlretrieve(url, appimage_path, reporthook=report_hook)
-            os.chmod(appimage_path, 0o755) # Tornar executável
+            os.chmod(appimage_path, 0o755)
 
-            # Criar e instalar .desktop entry para integração no menu
             app_data = next(app for app in self.apps if app["name"] == name)
             desktop_file_content = f"""[Desktop Entry]
 Name={name}
-Exec={appimage_path}
+Exec={appimage_path} %U
 Type=Application
-Icon={app_data['icon']}
+Icon={os.path.join(self.icon_dir, f"{quote(name)}.png")}
 Terminal=false
-Categories={app_data['app']};"""
+Categories={app_data['category']};
+Comment=Versão: {app_data['version']}"""
             desktop_path = os.path.expanduser(f"~/.local/share/applications/{name}.desktop")
             with open(desktop_path, 'w') as f:
                 f.write(desktop_file_content)
 
-            try:
-                subprocess.run(["xdg-desktop-menu", "install", desktop_path], check=True, capture_output=True, text=True)
-            except (subprocess.CalledProcessError, FileNotFoundError) as e:
-                error_msg = f"Erro ao integrar {name} ao menu: {e}"
-                if isinstance(e, subprocess.CalledProcessError):
-                    error_msg += f"\nDetalhes: {e.stderr}"
-                print(error_msg)
-                # Removed: GLib.idle_add(self.show_notification, f"Aviso: Não foi possível integrar {name} ao menu do sistema. Você pode precisar fazê-lo manualmente.")
-
-
             GLib.idle_add(self._update_download_progress, name, 1.0, "Concluído")
             GLib.idle_add(self.show_notification, f"{name} instalado com sucesso!")
-            GLib.idle_add(self.refresh_app_list) # Atualiza a lista de apps (para refletir 'instalado')
-            GLib.idle_add(self._update_action_button, button, name, True) # Atualiza o botão 'Instalar' para 'Remover'
-            GLib.idle_add(lambda: self.downloads.pop(name, None) and self.refresh_downloads_list()) # Remove da lista de downloads
-        except urllib.error.URLError as e:
-            error_message = f"Erro de rede ou URL inválida: {e.reason}"
-            GLib.idle_add(self._update_download_progress, name, 0.0, f"Erro: {error_message}")
-            GLib.idle_add(self.show_notification, f"Erro ao instalar {name}: {error_message}")
-            GLib.idle_add(self._update_action_button, button, name, False)
-            GLib.idle_add(lambda: self.downloads.pop(name, None) and self.refresh_downloads_list())
+            GLib.idle_add(self.refresh_app_list)
+            GLib.idle_add(self._update_action_button, button, name, True)
+            GLib.idle_add(lambda: self.downloads.pop(name, None) and self.download_threads.pop(name, None) and self.refresh_downloads_list())
         except Exception as e:
-            error_message = f"Erro inesperado durante a instalação: {str(e)}"
-            GLib.idle_add(self._update_download_progress, name, 0.0, f"Erro: {error_message}")
-            GLib.idle_add(self.show_notification, f"Erro ao instalar {name}: {error_message}")
+            GLib.idle_add(self._update_download_progress, name, 0.0, f"Erro: {str(e)}")
+            GLib.idle_add(self.show_notification, f"Erro ao instalar {name}: {str(e)}")
             GLib.idle_add(self._update_action_button, button, name, False)
-            GLib.idle_add(lambda: self.downloads.pop(name, None) and self.refresh_downloads_list())
+            GLib.idle_add(lambda: self.downloads.pop(name, None) and self.download_threads.pop(name, None) and self.refresh_downloads_list())
 
     def _update_download_progress(self, app_name, fraction, status_text):
-        """Atualiza o progresso de um download na interface."""
+        """Atualiza o progresso de download na UI."""
         if app_name in self.downloads:
-            self.downloads[app_name]["progress"] = fraction
-            self.downloads[app_name]["status"] = status_text
-            self.refresh_downloads_list() # Refrash a lista de downloads para refletir o progresso
+            self.downloads[app_name].update({"progress": fraction, "status": status_text, "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
+            self.update_download_history(app_name, self.downloads[app_name])
+            self.refresh_downloads_list()
 
     def _update_action_button(self, button, app_name, installed):
-        """Atualiza o estado (label e estilo) do botão de ação de instalar/remover."""
+        """Atualiza o estado do botão de instalar/remover."""
         button.set_sensitive(True)
         button.set_label("Remover" if installed else "Instalar")
         button.get_style_context().remove_class("suggested-action")
         button.get_style_context().remove_class("destructive-action")
         button.get_style_context().add_class("destructive-action" if installed else "suggested-action")
-        # Força a atualização da view de detalhes para que o botão reflita o estado real
         app = next((a for a in self.apps if a["name"] == app_name), None)
         if app:
-            GLib.idle_add(self.show_app_details, app)
-
+            GLib.idle_add(self.show_app_details, app, self.store_stack, "apps", "Loja")
+            GLib.idle_add(self.show_app_details, app, self.my_apps_stack, "list", "Meus Apps")
 
     def _remove_appimage(self, name, button):
-        """Função para remover AppImage e seu .desktop entry em uma thread separada."""
+        """Remove um AppImage e sua entrada de desktop."""
+        appimage_path = os.path.join(self.appimage_dir, f"{name}.AppImage")
+        desktop_path = os.path.expanduser(f"~/.local/share/applications/{name}.desktop")
+        icon_path = os.path.join(self.icon_dir, f"{quote(name)}.png")
+
         try:
-            appimage_path = os.path.join(self.appimage_dir, f"{name}.AppImage")
-            desktop_path = os.path.expanduser(f"~/.local/share/applications/{name}.desktop")
-
-            if os.path.exists(appimage_path):
-                os.remove(appimage_path)
-            if os.path.exists(desktop_path):
-                try:
-                    subprocess.run(["xdg-desktop-menu", "uninstall", desktop_path], check=True, capture_output=True, text=True)
-                except (subprocess.CalledProcessError, FileNotFoundError) as e:
-                    error_msg = f"Erro ao desintegrar {name} do menu: {e}"
-                    if isinstance(e, subprocess.CalledProcessError):
-                        error_msg += f"\nDetalhes: {e.stderr}"
-                    print(error_msg)
-                    # Removed: GLib.idle_add(self.show_notification, f"Aviso: Não foi possível desintegrar {name} do menu do sistema. Você pode precisar remover o atalho manualmente.")
-                os.remove(desktop_path) # Remover o arquivo .desktop mesmo se a desintegração falhar
-
+            for path in [appimage_path, desktop_path, icon_path]:
+                if os.path.exists(path):
+                    os.remove(path)
             GLib.idle_add(self.show_notification, f"{name} removido com sucesso!")
-            GLib.idle_add(self.refresh_app_list) # Atualiza a lista de apps (para refletir 'não instalado')
-            GLib.idle_add(self._update_action_button, button, name, False) # Atualiza o botão 'Remover' para 'Instalar'
+            GLib.idle_add(self.refresh_app_list)
+            GLib.idle_add(self._update_action_button, button, name, False)
         except Exception as e:
-            # Removed: GLib.idle_add(self.show_notification, f"Erro ao remover {name}: {str(e)}")
-            print(f"Erro ao remover {name}: {str(e)}") # Keep print for debugging if needed
-            # Se houver um erro, reabilita o botão e tenta manter o estado atual
-            GLib.idle_add(self._update_action_button, button, name, True if os.path.exists(appimage_path) else False)
-
+            GLib.idle_add(self.show_notification, f"Erro ao remover {name}: {e}")
+            GLib.idle_add(self._update_action_button, button, name, os.path.exists(appimage_path))
 
     def show_notification(self, message):
-        """Exibe uma notificação ao usuário."""
-        dialog = Gtk.MessageDialog(
-            transient_for=self,
-            flags=0,
-            message_type=Gtk.MessageType.INFO,
-            buttons=Gtk.ButtonsType.OK,
-            text=message
-        )
-        dialog.get_style_context().add_class("dialog")
+        """Exibe uma notificação."""
+        dialog = Gtk.MessageDialog(transient_for=self, message_type=Gtk.MessageType.INFO, buttons=Gtk.ButtonsType.OK, text=message)
         dialog.run()
         dialog.destroy()
 
-def main():
-    # Verifica o ambiente desktop. A integração do menu é otimizada para XFCE.
-    current_desktop = os.environ.get('XDG_CURRENT_DESKTOP', '').upper()
-    if 'XFCE' not in current_desktop and 'Xubuntu' not in current_desktop: # Adicionado Xubuntu para cobrir mais casos
-        print(f"Aviso: Este aplicativo é otimizado para o ambiente XFCE (detectado: {current_desktop}). A integração do menu pode não funcionar em outros ambientes.")
+    def show_error_dialog(self, message, offer_retry):
+        """Exibe um diálogo de erro com opção de tentar novamente, se aplicável."""
+        dialog = Gtk.MessageDialog(transient_for=self, message_type=Gtk.MessageType.ERROR,
+                                  buttons=Gtk.ButtonsType.YES_NO if offer_retry else Gtk.ButtonsType.OK, text=message)
+        if offer_retry:
+            dialog.format_secondary_text("Tentar novamente?")
+        if dialog.run() == Gtk.ResponseType.YES and offer_retry:
+            self.load_apps_from_url()
+            self.refresh_app_list()
+            self.refresh_downloads_list()
+        dialog.destroy()
 
+    def _create_completion_model(self):
+        """Cria modelo para autocompletar busca."""
+        model = Gtk.ListStore(str)
+        for app in self.apps:
+            model.append([app["name"]])
+            model.append([app["category"]])
+        return model
+
+def main():
     win = AppImageShop()
     win.connect("destroy", Gtk.main_quit)
     win.show_all()
