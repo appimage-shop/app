@@ -50,7 +50,7 @@ cd <diretório_do_repositório>
 **3. Executar a Aplicação:**
 
 ```bash
-python3 main.py
+sudo python3 installer.py
 ```
 
 ### Uso
