@@ -47,7 +47,7 @@ git clone https://github.com/appimage-shop/app.git
 cd <diretório_do_repositório>
 ```
 
-**3. Executar a Aplicação:**
+**3. Executar a Instalação:**
 
 ```bash
 python3 installer.py
