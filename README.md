@@ -102,6 +102,21 @@ python3 editor.py
 
 -----
 
+## Acesso ao Catálogo de Aplicativos AppImage (Versão de Testes)
+Para que o AppImage Shop utilize este catálogo de testes em vez do catálogo padrão, você pode alterar a URL da fonte de dados nas configurações do aplicativo.
+
+1.  Abra o **AppImage Shop**.
+2.  Navegue até o **menu de configurações**.
+3.  Selecione a aba Downloads.
+4.  Procure pela opção "URL do json de aplicativos".
+5.  Altere o valor para:
+    ```
+    https://raw.githubusercontent.com/appimage-shop/testing/refs/heads/main/app.json
+    ```
+6.  Salve as alterações e atualize a AppImage Shop para que o novo catálogo seja carregado.
+
+-----
+
 ## Contribuição
 
 Ambos os projetos são de código aberto\! Se você quiser contribuir para o AppImage Shop, considere:
