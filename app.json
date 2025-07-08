@@ -12,5 +12,19 @@
         "screenshots": [
             "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/gimp.png"
         ]
+    },
+    {
+        "name": "Bruno",
+        "description": "Cliente de API de código aberto rápido e amigável ao Git",
+        "appimage_url": "https://github.com/usebruno/bruno/releases/download/v2.7.0/bruno_2.7.0_x86_64_linux.AppImage",
+        "icon_url": "https://images.pling.com/cache/85x85-2/img/00/00/50/02/87/2147303/256x256.png",
+        "icon": "bruno",
+        "category": "Desenvolvimento",
+        "app": "Development",
+        "version": "2.7.0",
+        "details": "Bruno é um cliente de API de código aberto rápido e amigável ao Git, cujo objetivo é revolucionar o status quo representado pelo Postman, Insomnia e ferramentas similares por aí.",
+        "screenshots": [
+            "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/bruno.png"
+        ]
     }
 ]
