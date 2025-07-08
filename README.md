@@ -127,4 +127,4 @@ Ambos os projetos são de código aberto\! Se você quiser contribuir para o App
 
 -----
 
-Com essas ferramentas, gerenciar AppImages no Linux se torna uma tarefa muito mais simples e eficiente\!
+Com essas ferramentas, gerenciar AppImages no Linux se torna uma tarefa muito mais simples e eficiente!
