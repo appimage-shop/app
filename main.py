@@ -687,10 +687,10 @@ class AppImageShop(Gtk.Window):
 
         notebook.append_page(general_box, Gtk.Label(label="Geral"))
 
-        # Aba Sobre
+	# Aba Sobre
         about_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15, margin=20)
         about_label = Gtk.Label(
-            label="<b>AppImage Shop</b>\nUma loja para descobrir, baixar e gerenciar aplicativos AppImage.\n\n<b>Desenvolvedor:</b> Mateus Gonçalves",
+            label="<b>AppImage Shop</b>\nUma loja para descobrir, baixar e gerenciar aplicativos AppImage.\n\n<b>Desenvolvedor:</b> Mateus Gonçalves\n\n<b>Licença:</b> GPL-3.0",
             use_markup=True, justify=Gtk.Justification.CENTER
         )
         about_label.get_style_context().add_class("settings-label")
