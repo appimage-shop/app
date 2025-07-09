@@ -172,34 +172,32 @@ class AppImageShop(Gtk.Window):
         .category-button:checked {{ background-color: {c['sel_bg']}; color: {c['sel_fg']}; font-weight: bold; }}
         searchentry {{ padding: 12px 18px; border-radius: 12px; border: {'2px solid #FFFFFF' if high_contrast else '1px solid @borders'}; background-color: {c['base']}; font-size: {1.15 * font_scale}em; }}
         searchentry:focus {{ border-color: {c['sel_bg']}; }}
-        flowboxchild {{ background-color: {c['base']}; border: {'2px solid #FFFFFF' if high_contrast else '1px solid @borders'}; border-radius: 14px; padding: 25px; margin: 15px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); }}
-        flowboxchild:hover {{ box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); }}
-        .app-card .title {{ font-size: {1.3 * font_scale}em; font-weight: bold; margin-bottom: 10px; }}
-        .app-card .description {{ font-size: {1.0 * font_scale}em; margin: 10px 0; }}
-        .app-card .version {{ font-size: {0.95 * font_scale}em; opacity: 0.85; }}
-        .app-card .update-badge {{ background-color: {c['sel_bg']}; color: {c['sel_fg']}; font-size: {0.9 * font_scale}em; padding: 8px 12px; border-radius: 16px; margin-top: 10px; }}
-        .app-card .empty-state {{ font-size: {1.2 * font_scale}em; opacity: 0.8; padding: 30px; }}
-        button {{ padding: 12px 24px; border-radius: 10px; font-weight: bold; border: {'2px solid #FFFFFF' if high_contrast else '1px solid @borders'}; }}
+        .app-row {{ background-color: {c['base']}; border: {'2px solid #FFFFFF' if high_contrast else '1px solid @borders'}; border-radius: 10px; padding: 15px; margin: 10px; box-shadow: 0 3px 6px rgba(0,0,0,0.1); }}
+        .app-row:hover {{ background-color: {('#333333' if high_contrast else f"alpha({c['sel_bg']}, 0.1)")}; box-shadow: 0 5px 10px rgba(0,0,0,0.15); }}
+        .app-row .title {{ font-size: {1.2 * font_scale}em; font-weight: bold; margin-bottom: 5px; }}
+        .app-row .description {{ font-size: {0.95 * font_scale}em; opacity: 0.85; }}
+        .app-row .version {{ font-size: {0.9 * font_scale}em; opacity: 0.7; }}
+        .app-row .update-badge {{ background-color: {c['sel_bg']}; color: {c['sel_fg']}; font-size: {0.85 * font_scale}em; padding: 6px 10px; border-radius: 5px; margin-left: 10px; }}
+        button {{ padding: 10px 20px; border-radius: 8px; font-weight: bold; border: {'2px solid #FFFFFF' if high_contrast else 'none'}; }}
         button.suggested-action {{ background-color: {c['sel_bg']}; color: {c['sel_fg']}; }}
         button.suggested-action:hover {{ background-color: {'#CCCCCC' if high_contrast else f"shade({c['sel_bg']}, 0.9)"}; }}
         button.destructive-action {{ background-color: {'#FF0000' if high_contrast else '@error_bg_color'}; color: {'#FFFFFF' if high_contrast else '@error_fg_color'}; }}
-        button.destructive-action:hover {{ background-color: {'#CC0000' if high_contrast else 'shade(@error_bg_color, 0.9)'}; }}
-        notebook {{ background-color: {c['bg']}; border: {'2px solid #FFFFFF' if high_contrast else '1px solid @borders'}; border-radius: 12px; padding: 8px; }}
-        notebook tab {{ padding: 12px 24px; font-size: {1.15 * font_scale}em; border-radius: 12px 12px 0 0; }}
+        button.destructive-action:hover {{ background-color: {'#CC0000' if high_contrast else 'shade(@error_bg_color, -0.1)'}; }}
+        notebook {{ background-color: {c['bg']}; border: {'2px solid #FFFFFF' if high_contrast else '1px solid @borders'}; border-radius: 10px; padding: 4px; }}
+        notebook tab {{ padding: 10px 20px; font-size: 14px; border-radius: 8px 8px 0 0; }}
         notebook tab:checked {{ background-color: {c['sel_bg']}; color: {c['sel_fg']}; }}
         .details-view {{ padding: 20px; background-color: {c['bg']}; }}
         .details-view .title {{ font-size: {1.8 * font_scale}em; font-weight: bold; margin-bottom: 10px; }}
         .details-label {{ font-weight: bold; margin-bottom: 5px; }}
-        .details-text {{ font-size: {1.1 * font_scale}em; margin-bottom: 10px; }}
+        .details-text {{ font-size: {1.1 * font_scale}em; margin-bottom: 20px; }}
         .screenshot-image {{ border: {'2px solid #FFFFFF' if high_contrast else '1px solid @borders'}; border-radius: 10px; margin: 10px; }}
-        .download-row {{ padding: 25px; margin-bottom: 12px; border-radius: 12px; border: {'2px solid #FFFFFF' if high_contrast else '1px solid @borders'}; background-color: {c['base']}; }}
-        progressbar {{ min-height: 35px; border-radius: 8px; }}
-        progressbar trough {{ background-color: {'#333333' if high_contrast else f"alpha({c['fg']}, 0.2)"}; }}
-孔子
+        .download-row {{ padding: 15px; margin-bottom: 8px; border-radius: 10px; border: {'2px solid #FFFFFF' if high_contrast else '1px solid @borders'}; background-color: {c['base']}; }}
+        progressbar {{ min-height: 20px; border-radius: 5px; }}
+        progressbar trough {{ background-color: {'#333333' if high_contrast else f"alpha({c['fg']}, 0.15)"}; }}
         progressbar progress {{ background-color: {c['sel_bg']}; }}
-        .settings-dialog {{ padding: 20px; background-color: {c['base']}; border-radius: 12px; }}
+        .settings-panel {{ padding: 20px; background-color: {c['base']}; border-radius: 10px; }}
         .settings-label {{ font-weight: bold; font-size: {1.2 * font_scale}em; margin-bottom: 10px; color: {c['fg']}; }}
-        .settings-notebook tab {{ padding: 10px 20px; font-size: {1.1 * font_scale}em; border-radius: 8px 8px 0 0; }}
+        .settings-notebook tab {{ padding: 10px 20px; font-size: {1.1 * font_scale}em; border-radius: 5px 5px 0 0; }}
         .settings-notebook tab:checked {{ background-color: {c['sel_bg']}; color: {c['sel_fg']}; }}
         """
         css_provider = Gtk.CssProvider()
@@ -227,14 +225,14 @@ class AppImageShop(Gtk.Window):
         self.header_bar.pack_end(settings_button)
 
         # Barra Lateral
-        self.sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        self.sidebar.set_size_request(220, -1)
+        self.sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        self.sidebar.set_size_request(200, -1)
         self.sidebar.get_style_context().add_class("sidebar")
         self.main_box.pack_start(self.sidebar, False, False, 0)
 
         sidebar_title = Gtk.Label(label="<b>Categorias</b>", use_markup=True)
         sidebar_title.get_style_context().add_class("sidebar-title")
-        self.sidebar.pack_start(sidebar_title, False, False, 12)
+        self.sidebar.pack_start(sidebar_title, False, False, 10)
 
         self.category_group = None
         self.category_buttons = {}
@@ -246,15 +244,15 @@ class AppImageShop(Gtk.Window):
         self.category_buttons["Todos"] = all_button
 
         # Área de Conteúdo Principal
-        self.content_area = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
+        self.content_area = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         self.main_box.pack_start(self.content_area, True, True, 0)
 
-        self.notebook = Gtk.Notebook(margin_top=20)
+        self.notebook = Gtk.Notebook()
         self.notebook.connect("switch-page", self.on_notebook_page_switched)
-        self.content_area.pack_start(self.notebook, True, True, 0)
+        self.content_area.pack_start(self.notebook, True, True, 10)
 
-        self.store_box = self._create_store_view()
-        self.notebook.append_page(self.store_box, Gtk.Label(label="Loja"))
+        self.store_view = self._create_store_view()
+        self.notebook.append_page(self.store_view, Gtk.Label(label="Loja"))
 
         self.my_apps_box = self._create_my_apps_view()
         self.notebook.append_page(self.my_apps_box, Gtk.Label(label="Meus Apps"))
@@ -263,13 +261,13 @@ class AppImageShop(Gtk.Window):
         self.notebook.append_page(self.downloads_box, Gtk.Label(label="Downloads"))
 
     def _create_store_view(self):
-        """Cria a visão da loja com busca e cartões de aplicativos."""
-        store_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
+        """Cria a visão da loja com busca e lista de aplicativos."""
+        store_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         self.store_stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
         store_box.pack_start(self.store_stack, True, True, 0)
 
-        apps_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-        search_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12, margin=25)
+        apps_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        search_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10, margin=20)
         apps_box.pack_start(search_box, False, False, 0)
 
         self.search_entry = Gtk.Entry(placeholder_text="Pesquisar aplicativos...")
@@ -285,12 +283,11 @@ class AppImageShop(Gtk.Window):
         clear_button.connect("clicked", lambda btn: self.search_entry.set_text(""))
         search_box.pack_start(clear_button, False, False, 0)
 
-        self.flow_box = Gtk.FlowBox(valign=Gtk.Align.START, max_children_per_line=5, min_children_per_line=2,
-                                    column_spacing=25, row_spacing=25, selection_mode=Gtk.SelectionMode.SINGLE)
-        self.flow_box.connect("child-activated", self.on_app_selected)
-        scrolled_window = Gtk.ScrolledWindow(margin_start=25, margin_end=25, margin_bottom=25)
+        self.app_list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
+        self.app_list.connect("row-activated", self.on_app_selected)
+        scrolled_window = Gtk.ScrolledWindow(margin_start=20, margin_end=20, margin_bottom=20)
         scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        scrolled_window.add(self.flow_box)
+        scrolled_window.add(self.app_list)
         apps_box.pack_start(scrolled_window, True, True, 0)
 
         self.store_stack.add_named(apps_box, "apps")
@@ -298,20 +295,19 @@ class AppImageShop(Gtk.Window):
 
     def _create_my_apps_view(self):
         """Cria a visão para aplicativos instalados."""
-        my_apps_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
+        my_apps_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         self.my_apps_stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
         my_apps_box.pack_start(self.my_apps_stack, True, True, 0)
 
-        list_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=25, margin=20)
+        list_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20, margin=15)
         header = Gtk.Label(label="<b>Aplicativos Instalados</b>", use_markup=True)
         list_box.pack_start(header, False, False, 0)
 
-        self.installed_flow_box = Gtk.FlowBox(valign=Gtk.Align.START, max_children_per_line=5, min_children_per_line=2,
-                                             column_spacing=25, row_spacing=25, selection_mode=Gtk.SelectionMode.SINGLE)
-        self.installed_flow_box.connect("child-activated", self.on_app_selected)
-        scrolled = Gtk.ScrolledWindow(margin=15)
+        self.installed_app_list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
+        self.installed_app_list.connect("row-activated", self.on_app_selected)
+        scrolled = Gtk.ScrolledWindow(margin=10)
         scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        scrolled.add(self.installed_flow_box)
+        scrolled.add(self.installed_app_list)
         list_box.pack_start(scrolled, True, True, 0)
 
         self.my_apps_stack.add_named(list_box, "list")
@@ -319,8 +315,8 @@ class AppImageShop(Gtk.Window):
 
     def _create_downloads_view(self):
         """Cria a visão de downloads com histórico e botão de limpar."""
-        downloads_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-        header_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=15, margin_start=25, margin_top=20)
+        downloads_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        header_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10, margin_start=20, margin_top=15)
         title = Gtk.Label(label="<b>Downloads</b>", use_markup=True)
         header_box.pack_start(title, False, False, 0)
 
@@ -331,7 +327,7 @@ class AppImageShop(Gtk.Window):
         downloads_box.pack_start(header_box, False, False, 0)
 
         self.downloads_list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
-        scrolled = Gtk.ScrolledWindow(margin_start=25, margin_end=25, margin_bottom=25)
+        scrolled = Gtk.ScrolledWindow(margin_start=20, margin_end=20, margin_bottom=20)
         scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         scrolled.add(self.downloads_list)
         downloads_box.pack_start(scrolled, True, True, 0)
@@ -386,8 +382,8 @@ class AppImageShop(Gtk.Window):
 
     def refresh_app_list(self):
         """Atualiza a lista de aplicativos com base em filtros de busca e categoria."""
-        for child in self.flow_box.get_children():
-            self.flow_box.remove(child)
+        for child in self.app_list.get_children():
+            self.app_list.remove(child)
 
         search_text = self.search_entry.get_text().lower()
         selected_category = next((cat for cat, btn in self.category_buttons.items() if btn.get_active()), "Todos")
@@ -395,21 +391,21 @@ class AppImageShop(Gtk.Window):
         for app in self.apps:
             if (selected_category == "Todos" or app["category"] == selected_category) and \
                (not search_text or search_text in app["name"].lower() or search_text in app["description"].lower()):
-                self._create_app_card(app, self.flow_box)
+                self._create_app_row(app, self.app_list)
 
-        self.flow_box.show_all()
+        self.app_list.show_all()
         self.refresh_my_apps_list()
 
     def refresh_my_apps_list(self):
         """Atualiza a lista de aplicativos instalados."""
         self.my_apps_stack.set_visible_child_name("list")
-        for child in self.installed_flow_box.get_children():
-            self.installed_flow_box.remove(child)
+        for child in self.installed_app_list.get_children():
+            self.installed_app_list.remove(child)
 
         installed_apps = [app for app in self.apps if os.path.exists(os.path.join(self.appimage_dir, f"{app['name']}.AppImage"))]
         if not installed_apps:
-            empty_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
-            empty_box.get_style_context().add_class("app-card")
+            empty_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+            empty_box.get_style_context().add_class("app-row")
             empty_icon = Gtk.Image.new_from_icon_name("dialog-information", Gtk.IconSize.DIALOG)
             empty_label = Gtk.Label(label="Nenhum aplicativo instalado.")
             explore_button = Gtk.Button(label="Explorar Loja")
@@ -418,7 +414,7 @@ class AppImageShop(Gtk.Window):
             empty_box.pack_start(empty_icon, False, False, 0)
             empty_box.pack_start(empty_label, False, False, 0)
             empty_box.pack_start(explore_button, False, False, 0)
-            self.installed_flow_box.add(empty_box)
+            self.installed_app_list.add(empty_box)
         else:
             for app in installed_apps:
                 appimage_path = os.path.join(self.appimage_dir, f"{app['name']}.AppImage")
@@ -428,8 +424,8 @@ class AppImageShop(Gtk.Window):
                     with open(desktop_path, 'r') as f:
                         installed_version = next((line.split("Versão:")[1].strip() for line in f if line.startswith("Comment=Versão:")), app['version'])
                         is_update = installed_version != app['version']
-                self._create_app_card(app, self.installed_flow_box, is_update)
-        self.installed_flow_box.show_all()
+                self._create_app_row(app, self.installed_app_list, is_update)
+        self.installed_app_list.show_all()
 
     def refresh_downloads_list(self):
         """Atualiza a lista de downloads com downloads ativos e histórico."""
@@ -444,39 +440,60 @@ class AppImageShop(Gtk.Window):
                 self._create_download_row(app_name, all_downloads[app_name])
         self.downloads_list.show_all()
 
-    def _create_app_card(self, app, flow_box, is_update=False):
-        """Cria um cartão de aplicativo."""
-        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        card.get_style_context().add_class("app-card")
-        card.set_size_request(260, -1)
+    def _create_app_row(self, app, list_box, is_update=False):
+        """Cria uma linha de aplicativo para a lista."""
+        row = Gtk.ListBoxRow()
+        row.get_style_context().add_class("app-row")
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8, margin=8)
+        row.add(box)
 
         icon = self.get_custom_icon(app)
-        card.pack_start(icon, False, False, 0)
+        box.pack_start(icon, False, False, 0)
 
-        name_label = Gtk.Label(label=app['name'], halign=Gtk.Align.CENTER, ellipsize=Pango.EllipsizeMode.END)
+        content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        content_box.set_hexpand(True)
+        box.pack_start(content_box, True, True, 0)
+
+        name_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        name_label = Gtk.Label(label=app['name'], halign=Gtk.Align.START, ellipsize=Pango.EllipsizeMode.END)
         name_label.get_style_context().add_class("title")
-        card.pack_start(name_label, False, False, 0)
-
-        version_label = Gtk.Label(label=f"v{app.get('version', 'N/A')}", halign=Gtk.Align.CENTER)
-        version_label.get_style_context().add_class("version")
-        card.pack_start(version_label, False, False, 0)
-
+        name_box.pack_start(name_label, False, False, 0)
+        
         if is_update:
-            update_badge = Gtk.Label(label="Atualização Disponível")
+            update_badge = Gtk.Label(label="Atualização")
             update_badge.get_style_context().add_class("update-badge")
-            card.pack_start(update_badge, False, False, 0)
+            name_box.pack_start(update_badge, False, False, 0)
+        content_box.pack_start(name_box, False, False, 0)
 
-        desc_label = Gtk.Label(label=app.get("description", "Sem descrição"), wrap=True, justify=Gtk.Justification.CENTER, max_width_chars=35)
+        version_label = Gtk.Label(label=f"v{app.get('version', 'N/A')}", halign=Gtk.Align.START)
+        version_label.get_style_context().add_class("version")
+        content_box.pack_start(version_label, False, False, 0)
+
+        desc_label = Gtk.Label(label=app.get("description", "Sem descrição"), wrap=True, halign=Gtk.Align.START, max_width_chars=60)
         desc_label.get_style_context().add_class("description")
-        card.pack_start(desc_label, True, True, 6)
+        content_box.pack_start(desc_label, False, False, 0)
 
-        flow_box.add(card)
+        button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        appimage_path = os.path.join(self.appimage_dir, f"{app['name']}.AppImage")
+        action_button = Gtk.Button(label="Remover" if os.path.exists(appimage_path) else "Instalar")
+        action_button.get_style_context().add_class("destructive-action" if os.path.exists(appimage_path) else "suggested-action")
+        action_button.connect("clicked", self.on_action_clicked, app["name"], app.get("appimage_url", ""), os.path.exists(appimage_path))
+        button_box.pack_start(action_button, False, False, 0)
+
+        if os.path.exists(appimage_path):
+            launch_button = Gtk.Button(label="Iniciar")
+            launch_button.get_style_context().add_class("suggested-action")
+            launch_button.connect("clicked", self.on_launch_clicked, app["name"])
+            button_box.pack_start(launch_button, False, False, 0)
+
+        box.pack_end(button_box, False, False, 0)
+        list_box.add(row)
 
     def _create_download_row(self, app_name, info):
         """Cria uma linha de progresso de download."""
         row = Gtk.ListBoxRow()
         row.get_style_context().add_class("download-row")
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=20, margin=6)
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10, margin=5)
         row.add(box)
 
         status_icon = Gtk.Image.new_from_icon_name("dialog-error" if "Erro" in info["status"] else "emblem-downloads", Gtk.IconSize.BUTTON)
@@ -526,7 +543,6 @@ class AppImageShop(Gtk.Window):
     def get_screenshot_image(self, screenshot_url, app_name):
         """Carrega ou busca uma captura de tela de forma assíncrona."""
         image = Gtk.Image.new_from_icon_name("image-x-generic", Gtk.IconSize.DIALOG)
-
         screenshot_path = os.path.join(self.icon_dir, f"{quote(app_name)}_screenshot_{quote(screenshot_url.split('/')[-1])}")
         if os.path.exists(screenshot_path):
             try:
@@ -609,18 +625,18 @@ class AppImageShop(Gtk.Window):
 
     def on_settings_clicked(self, button):
         """Abre o diálogo de configurações."""
-        dialog = Gtk.Dialog(title="Configurações", transient_for=self, flags=0)
+        dialog = Gtk.Dialog(title="Configurações", transient_for=self, modal=True)
         dialog.set_default_size(500, 400)
         dialog.add_buttons("Cancelar", Gtk.ResponseType.CANCEL, "Aplicar", Gtk.ResponseType.APPLY)
         content_area = dialog.get_content_area()
-        content_area.set_border_width(20)
+        content_area.set_border_width(15)
 
         notebook = Gtk.Notebook()
-        content_area.add(notebook)
+        content_area.pack_start(notebook, True, True, 0)
 
         # Aba de Acessibilidade
-        accessibility_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15, margin=20)
-        accessibility_grid = Gtk.Grid(column_spacing=15, row_spacing=15)
+        accessibility_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin=15)
+        accessibility_grid = Gtk.Grid(column_spacing=10, row_spacing=10)
         accessibility_box.pack_start(accessibility_grid, False, False, 0)
 
         high_contrast_label = Gtk.Label(label="Alto Contraste", halign=Gtk.Align.START)
@@ -631,7 +647,7 @@ class AppImageShop(Gtk.Window):
 
         font_scale_label = Gtk.Label(label="Escala de Fonte", halign=Gtk.Align.START)
         font_scale_label.get_style_context().add_class("settings-label")
-        font_scale_spin = Gtk.SpinButton(adjustment=Gtk.Adjustment(value=self.config.getfloat('Accessibility', 'font_scale'), lower=0.8, upper=1.5, step_increment=0.1), digits=1)
+        font_scale_spin = Gtk.SpinButton(adjustment=Gtk.Adjustment(value=float(self.config.get('Accessibility', 'font_scale')), lower=0.8, upper=1.5, step_increment=0.1), digits=1)
         font_scale_spin.set_tooltip_text("Definir tamanho da fonte (0.8 a 1.5)")
         accessibility_grid.attach(font_scale_label, 0, 1, 1, 1)
         accessibility_grid.attach(font_scale_spin, 1, 1, 1, 1)
@@ -641,15 +657,15 @@ class AppImageShop(Gtk.Window):
         theme_combo = Gtk.ComboBoxText()
         for theme in ["Claro", "Escuro", "Sistema"]:
             theme_combo.append_text(theme)
-        theme_combo.set_active(['Claro', 'Escuro', 'Sistema'].index(self.config.get('Appearance', 'theme')))
+        theme_combo.set_active(["Claro", "Escuro", "Sistema"].index(self.config.get('Appearance', 'theme')))
         accessibility_grid.attach(theme_label, 0, 2, 1, 1)
         accessibility_grid.attach(theme_combo, 1, 2, 1, 1)
 
         notebook.append_page(accessibility_box, Gtk.Label(label="Acessibilidade"))
 
         # Aba de Downloads
-        downloads_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15, margin=20)
-        downloads_grid = Gtk.Grid(column_spacing=15, row_spacing=15)
+        downloads_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin=15)
+        downloads_grid = Gtk.Grid(column_spacing=10, row_spacing=10)
         downloads_box.pack_start(downloads_grid, False, False, 0)
 
         appimage_dir_label = Gtk.Label(label="Diretório de AppImage", halign=Gtk.Align.START)
@@ -669,8 +685,8 @@ class AppImageShop(Gtk.Window):
         notebook.append_page(downloads_box, Gtk.Label(label="Downloads"))
 
         # Aba Geral
-        general_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15, margin=20)
-        general_grid = Gtk.Grid(column_spacing=15, row_spacing=15)
+        general_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin=15)
+        general_grid = Gtk.Grid(column_spacing=10, row_spacing=10)
         general_box.pack_start(general_grid, False, False, 0)
 
         auto_refresh_label = Gtk.Label(label="Atualização Automática", halign=Gtk.Align.START)
@@ -687,8 +703,8 @@ class AppImageShop(Gtk.Window):
 
         notebook.append_page(general_box, Gtk.Label(label="Geral"))
 
-	# Aba Sobre
-        about_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15, margin=20)
+        # Aba Sobre
+        about_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin=15)
         about_label = Gtk.Label(
             label="<b>AppImage Shop</b>\nUma loja para descobrir, baixar e gerenciar aplicativos AppImage.\n\n<b>Desenvolvedor:</b> Mateus Gonçalves\n\n<b>Licença:</b> GPL-3.0",
             use_markup=True, justify=Gtk.Justification.CENTER
@@ -709,13 +725,13 @@ class AppImageShop(Gtk.Window):
                 self.config['Downloads']['apps_data_url'] = apps_data_url_entry.get_text() or DEFAULT_APPS_DATA_URL
                 self.config['Settings']['auto_refresh'] = str(auto_refresh_switch.get_active())
                 self.save_config()
-                self.appimage_dir = self.config['Downloads']['appimage_dir']
-                self.apps_data_url = self.config['Downloads']['apps_data_url']
+                self.appimage_dir = self.config.get('Downloads', 'appimage_dir')
+                self.apps_data_url = self.config.get('Downloads', 'apps_data_url')
                 os.makedirs(self.appimage_dir, exist_ok=True)
                 self._apply_css()
                 self.refresh_app_list()
                 self.refresh_downloads_list()
-                self.load_apps_from_url()  # Recarrega aplicativos com a nova URL
+                self.load_apps_from_url()
             confirm_dialog.destroy()
         dialog.destroy()
 
@@ -729,24 +745,35 @@ class AppImageShop(Gtk.Window):
             self.show_notification("Configurações redefinidas para o padrão.")
         confirm_dialog.destroy()
 
-    def on_app_selected(self, flowbox, child):
-        """Manipula seleção de aplicativo no FlowBox."""
-        app_name = flowbox.get_child_at_index(child.get_index()).get_children()[0].get_children()[1].get_label()
-        app = next((a for a in self.apps if a["name"] == app_name), None)
-        if app:
-            print(f"App selecionado: {app_name}, Detalhes: {app}")  # Depuração
-            if flowbox == self.installed_flow_box:
-                self.notebook.set_current_page(1)
-                self.show_app_details(app, self.my_apps_stack, "list", "Meus Apps")
+    def on_app_selected(self, listbox, row):
+        """Manipula seleção de aplicativo no ListBox."""
+        if row and row.get_child():
+            box = row.get_child()
+            children = box.get_children()
+            if len(children) >= 2 and isinstance(children[1], Gtk.Box):  # Check if content_box exists
+                content_box = children[1]
+                name_box = content_box.get_children()[0]  # First child is name_box
+                name_label = name_box.get_children()[0]  # First child is name_label
+                if isinstance(name_label, Gtk.Label):
+                    app_name = name_label.get_label()
+                    app = next((a for a in self.apps if a["name"] == app_name), None)
+                    if app:
+                        print(f"App selecionado: {app_name}, Detalhes: {app}")
+                        if listbox == self.installed_app_list:
+                            self.notebook.set_current_page(1)
+                            self.show_app_details(app, self.my_apps_stack, "list")
+                        else:
+                            self.notebook.set_current_page(0)
+                            self.show_app_details(app, self.store_stack, "apps")
+                    else:
+                        print(f"Aplicativo não encontrado: {app_name}")
+                else:
+                    print("Name label not found in row structure")
             else:
-                self.notebook.set_current_page(0)
-                self.show_app_details(app, self.store_stack, "apps", "Loja")
-        else:
-            print(f"Aplicativo não encontrado: {app_name}")  # Depuração
+                print("Invalid row structure or placeholder row selected")
 
-    def show_app_details(self, app, target_stack, back_view_name, tab_name):
+    def show_app_details(self, app, target_stack, back_view_name):
         """Exibe a visão detalhada do aplicativo."""
-        print(f"Exibindo detalhes para {app['name']} no stack {target_stack}, visão anterior: {back_view_name}")  # Depuração
         details_name = f"details_{app['name']}"
         if target_stack.get_child_by_name(details_name):
             target_stack.remove(target_stack.get_child_by_name(details_name))
@@ -761,7 +788,7 @@ class AppImageShop(Gtk.Window):
                                                    self.header_bar.set_subtitle("Sua Loja de AppImage - Desde 2025")])
         details_box.pack_start(back_button, False, False, 0)
 
-        content_grid = Gtk.Grid(column_spacing=20, row_spacing=10, margin=10)
+        content_grid = Gtk.Grid(column_spacing=15, row_spacing=5, margin=10)
         content_grid.set_property("visible", True)
         details_box.pack_start(content_grid, True, True, 0)
 
@@ -774,12 +801,12 @@ class AppImageShop(Gtk.Window):
         name_label.set_property("visible", True)
         content_grid.attach(name_label, 1, 0, 1, 1)
 
-        version_label = Gtk.Label(label=f"<span weight='bold'>Versão:</span> {app.get('version', 'N/A')}", use_markup=True, halign=Gtk.Align.START)
+        version_label = Gtk.Label(label=f"<b>Versão:</b> {app.get('version', 'N/A')}", use_markup=True, halign=Gtk.Align.START)
         version_label.get_style_context().add_class("details-text")
         version_label.set_property("visible", True)
         content_grid.attach(version_label, 1, 1, 1, 1)
 
-        category_label = Gtk.Label(label=f"<span weight='bold'>Categoria:</span> {app.get('category', 'N/A')}", use_markup=True, halign=Gtk.Align.START)
+        category_label = Gtk.Label(label=f"<b>Categoria:</b> {app.get('category', 'N/A')}", use_markup=True, halign=Gtk.Align.START)
         category_label.get_style_context().add_class("details-text")
         category_label.set_property("visible", True)
         content_grid.attach(category_label, 1, 2, 1, 1)
@@ -789,7 +816,7 @@ class AppImageShop(Gtk.Window):
         description_title.set_property("visible", True)
         content_grid.attach(description_title, 0, 3, 2, 1)
 
-        desc_label = Gtk.Label(label=app.get("details", app.get("description", "Sem descrição disponível")), wrap=True, max_width_chars=90, halign=Gtk.Align.START)
+        desc_label = Gtk.Label(label=app.get("description", "Sem descrição disponível"), wrap=True, max_width_chars=80, halign=Gtk.Align.START)
         desc_label.get_style_context().add_class("details-text")
         desc_label.set_property("visible", True)
         content_grid.attach(desc_label, 0, 4, 2, 1)
@@ -835,7 +862,6 @@ class AppImageShop(Gtk.Window):
         target_stack.set_visible_child_name(details_name)
         self.header_bar.set_subtitle(f"{app['name']} - Detalhes")
         details_box.show_all()
-        print(f"Visão de detalhes definida para {details_name} na aba {tab_name}")  # Depuração
 
     def on_launch_clicked(self, button, app_name):
         """Inicia um aplicativo instalado."""
@@ -898,7 +924,7 @@ Exec={appimage_path} %U
 Type=Application
 Icon={os.path.join(self.icon_dir, f"{quote(name)}.png")}
 Terminal=false
-Categories={app_data['app']};
+Categories={app_data['category']};
 Comment=Versão: {app_data['version']}"""
             desktop_path = os.path.expanduser(f"~/.local/share/applications/{name}.desktop")
             with open(desktop_path, 'w') as f:
@@ -931,8 +957,8 @@ Comment=Versão: {app_data['version']}"""
         button.get_style_context().add_class("destructive-action" if installed else "suggested-action")
         app = next((a for a in self.apps if a["name"] == app_name), None)
         if app:
-            GLib.idle_add(self.show_app_details, app, self.store_stack, "apps", "Loja")
-            GLib.idle_add(self.show_app_details, app, self.my_apps_stack, "list", "Meus Apps")
+            GLib.idle_add(self.show_app_details, app, self.store_stack, "apps")
+            GLib.idle_add(self.show_app_details, app, self.my_apps_stack, "list")
 
     def _remove_appimage(self, name, button):
         """Remove um AppImage e sua entrada de desktop."""
@@ -978,9 +1004,9 @@ Comment=Versão: {app_data['version']}"""
         return model
 
 def main():
-    win = AppImageShop()
-    win.connect("destroy", Gtk.main_quit)
-    win.show_all()
+    app = AppImageShop()
+    app.connect("destroy", Gtk.main_quit)
+    app.show_all()
     Gtk.main()
 
 if __name__ == "__main__":
