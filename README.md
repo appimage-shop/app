@@ -71,37 +71,6 @@ Ao iniciar o AppImage Shop, você verá a janela principal, organizada em seçõ
 
 -----
 
-## Editor App.json
-
-O **App.json Editor** é um editor gráfico de arquivos JSON, que atua como uma ferramenta complementar ao AppImage Shop. Sua função principal é gerenciar a lista de aplicativos que o AppImage Shop exibe, permitindo que os mantenedores adicionem, editem ou removam entradas sem precisar editar o JSON manualmente.
-
-### Funcionalidades do Editor
-
-  * **Carregar e Salvar Arquivos JSON:** Carregue arquivos `app.json` (ou outros JSONs) e salve as alterações.
-  * **Interface Gráfica (GTK):** Desenvolvido com GTK 3 para uma experiência visual amigável.
-  * **Visualização em Lista:** Exibe os aplicativos em uma TreeView com colunas para "Nome", "Versão" e "Categoria".
-  * **Gerenciamento de Aplicativos:**
-      * **Adicionar Novos:** Inclua novas entradas de aplicativos no arquivo JSON.
-      * **Editar Existentes:** Edite detalhes como Nome, Descrição, URLs (AppImage, Ícone), Categoria (em português e inglês), Versão, Detalhes e Capturas de Tela (separadas por vírgula).
-      * **Excluir:** Remova aplicativos selecionados da lista.
-  * **Notificações ao Usuário:** Mensagens claras de sucesso ou erro para todas as operações.
-  * **Seleção de Arquivo:** Inclui um seletor para abrir diferentes arquivos JSON.
-  * **Seção "Sobre":** Fornece informações sobre o desenvolvedor e o propósito do editor.
-
-### Como o Editor se Relaciona com o AppImage Shop
-
-O `editor.py` é essencial para manter o catálogo do AppImage Shop atualizado. Ele capacita os mantenedores a gerenciar os dados dos aplicativos, garantindo que o AppImage Shop sempre ofereça uma lista precisa e relevante de softwares.
-
-### Utilização do Editor
-
-Para executar o editor, você precisará das mesmas dependências Python e GTK do AppImage Shop.
-
-```bash
-python3 editor.py
-```
-
------
-
 ## Acesso ao Catálogo de Aplicativos AppImage (Versão de Testes)
 Para que o AppImage Shop utilize este catálogo de testes em vez do catálogo padrão, você pode alterar a URL da fonte de dados nas configurações do aplicativo.
 
