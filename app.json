@@ -14,31 +14,45 @@
         ]
     },
     {
-        "name": "Bruno",
-        "description": "Cliente de API de código aberto rápido e amigável ao Git",
-        "appimage_url": "https://github.com/usebruno/bruno/releases/download/v2.7.0/bruno_2.7.0_x86_64_linux.AppImage",
-        "icon_url": "https://images.pling.com/cache/85x85-2/img/00/00/50/02/87/2147303/256x256.png",
-        "icon": "bruno",
-        "category": "Desenvolvimento",
-        "app": "Development",
-        "version": "2.7.0",
-        "details": "Bruno é um cliente de API de código aberto rápido e amigável ao Git, cujo objetivo é revolucionar o status quo representado pelo Postman, Insomnia e ferramentas similares por aí.",
+        "name": "VLC",
+        "description": "Reprodutor multimídia multiplataforma, gratuito e de código aberto.",
+        "appimage_url": "https://github.com/cmatomic/VLCplayer-AppImage/releases/download/3.0.11.1/VLC_media_player-3.0.11.1-x86_64.AppImage",
+        "icon_url": "https://images.videolan.org/images/VLC-IconSmall.png",
+        "icon": "vlc",
+        "category": "Multimídia",
+        "app": "AudioVideo",
+        "version": "3.0.11.1",
+        "details": "O VLC é um reprodutor multimídia multiplataforma, gratuito e de código aberto, que reproduz a maioria dos arquivos multimídia, bem como DVDs, CDs de áudio, VCDs e diversos protocolos de streaming.",
         "screenshots": [
-            "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/bruno.png"
+            "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/vlc.png"
         ]
     },
     {
-        "name": "Audacity",
-        "description": "Software gratuito para gravação e edição de áudio.",
-        "appimage_url": "https://github.com/audacity/audacity/releases/download/Audacity-3.7.4/audacity-linux-3.7.4-x64-22.04.AppImage",
-        "icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Audacity_Logo_nofilter.svg/128px-Audacity_Logo_nofilter.png",
-        "icon": "audacity",
+        "name": "OBS-Studio",
+        "description": "Software para gravação de vídeo e transmissão ao vivo.",
+        "appimage_url": "https://github.com/ivan-hc/OBS-Studio-appimage/releases/download/continuous/OBS-Studio_31.0.4-1-archimage4.3-x86_64.AppImage",
+        "icon_url": "https://images.pling.com/cache/85x85-2/img/00/00/57/46/34/1409898/99270be41ab9c28e2fffd6ad5142597d863e0209c0e4f6f60af9e624af297d765bef1.png",
+        "icon": "obs",
         "category": "Multimídia",
         "app": "AudioVideo",
-        "version": "3.7.2",
-        "details": "O Audacity é o software gratuito mais popular do mundo para gravação e edição de áudio. Então, se você está produzindo música, criando um podcast ou apenas brincando com áudio, o Audacity é para você.",
+        "version": "31.0.4",
+        "details": "Open Broadcaster Software (OBS) é um programa de streaming e gravação gratuito e de código aberto mantido pelo OBS Project.",
         "screenshots": [
-            "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/audacity.png"
+            "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/obs.png"
+        ]
+    },
+    {
+        "name": "LibreOffice",
+        "description": "Suíte de aplicativos livres e de código aberto para escritório.",
+        "appimage_url": "https://appimages.libreitalia.org/LibreOffice-24.2.0.3.full-x86_64.AppImage",
+        "icon_url": "https://images.pling.com/cache/85x85-2/img/00/00/44/47/59/1170397/be20bb1310041e43d258775064a7f83bc5da.png",
+        "icon": "libreoffice",
+        "category": "Escritório",
+        "app": "Office",
+        "version": "24.2.0.3",
+        "details": "LibreOffice é uma suíte de aplicativos livres e de código aberto para escritório disponível para Windows, Unix, Solaris, Linux e macOS. A suíte utiliza o formato OpenDocument (ODF - OpenDocument Format) — formato homologado como ISO/IEC 26300 e NBR ISO/IEC 26300 — e é também compatível com os formatos do Microsoft Office, além de outros formatos legados. Alguns deles não são suportados pelas versões mais recentes do Microsoft Office, mas ainda podem ser abertos pelo LibreOffice.",
+        "screenshots": [
+            "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/libreoffice.png"
         ]
     }
 ]
