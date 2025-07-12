@@ -2,15 +2,24 @@
     {
         "name": "GIMP",
         "description": "Editor de imagens e manipulação de fotos.",
-        "appimage_url": "https://edgeuno-bog2.mm.fcix.net/gimp/gimp/v3.0/linux/GIMP-3.0.4-x86_64.AppImage",
+        "appimage_url": "https://edgeuno-bog2.mm.fcix.net/gimp/gimp/v3.0.4/linux/GIMP-3.0.4-x86_64.AppImage",
         "icon_url": "https://www.gimp.org/images/frontpage/wilber-big.png",
         "icon": "gimp",
         "category": "Gráficos",
         "app": "Graphics",
         "version": "3.0.4",
+        "details": "GIMP (GNU Image Manipulation Program) é um editor de imagens de código aberto para retocar fotos, composição de imagens e criação de arte.",
         "screenshots": [
-            "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/gimp.png"
-        ]
+            {
+                "url": "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/gimp.png",
+                "caption": "Interface principal do GIMP para edição de imagens."
+            }
+        ],
+        "license": "GPL-3.0",
+        "size": "230 MB",
+        "last_updated": "2025-06-15",
+        "tags": ["edição de imagem", "design gráfico", "código aberto"],
+        "alternative_versions": []
     },
     {
         "name": "VLC",
@@ -21,9 +30,18 @@
         "category": "Multimídia",
         "app": "AudioVideo",
         "version": "3.0.11.1",
+        "details": "O VLC é um reprodutor multimídia multiplataforma, gratuito e de código aberto, que reproduz a maioria dos arquivos multimídia, bem como DVDs, CDs de áudio, VCDs e diversos protocolos de streaming.",
         "screenshots": [
-            "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/vlc.png"
-        ]
+            {
+                "url": "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/vlc.png",
+                "caption": "Reprodução de vídeo no VLC Media Player."
+            }
+        ],
+        "license": "GPL-2.0",
+        "size": "150 MB",
+        "last_updated": "2025-05-20",
+        "tags": ["reprodutor de mídia", "vídeo", "áudio"],
+        "alternative_versions": []
     },
     {
         "name": "OBS-Studio",
@@ -34,9 +52,18 @@
         "category": "Multimídia",
         "app": "AudioVideo",
         "version": "31.0.4",
+        "details": "Open Broadcaster Software (OBS) é um programa de streaming e gravação gratuito e de código aberto mantido pelo OBS Project.",
         "screenshots": [
-            "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/obs.png"
-        ]
+            {
+                "url": "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/obs.png",
+                "caption": "Interface de transmissão ao vivo no OBS Studio."
+            }
+        ],
+        "license": "GPL-2.0",
+        "size": "180 MB",
+        "last_updated": "2025-07-01",
+        "tags": ["streaming", "gravação", "vídeo"],
+        "alternative_versions": []
     },
     {
         "name": "LibreOffice",
@@ -47,9 +74,18 @@
         "category": "Escritório",
         "app": "Office",
         "version": "24.2.0.3",
+        "details": "LibreOffice é uma suíte de aplicativos livres e de código aberto para escritório disponível para Windows, Unix, Solaris, Linux e macOS. A suíte utiliza o formato OpenDocument (ODF - OpenDocument Format) — formato homologado como ISO/IEC 26300 e NBR ISO/IEC 26300 — e é também compatível com os formatos do Microsoft Office, além de outros formatos legados.",
         "screenshots": [
-            "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/libreoffice.png"
-        ]
+            {
+                "url": "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/libreoffice.png",
+                "caption": "Interface do LibreOffice Writer para edição de documentos."
+            }
+        ],
+        "license": "MPL-2.0",
+        "size": "300 MB",
+        "last_updated": "2025-06-30",
+        "tags": ["produtividade", "escritório", "documentos"],
+        "alternative_versions": []
     },
     {
         "name": "Krita",
@@ -60,8 +96,17 @@
         "category": "Gráficos",
         "app": "Graphics",
         "version": "5.2.10",
+        "details": "Krita é uma ferramenta de criação de ilustrações, concept art, histórias em quadrinhos, pinturas digitais e animações, também podendo ser usado como um programa de retoques e manipulação de fotografia, conversor de formatos, suportando vários modelos de cores e pintura HDR.",
         "screenshots": [
-            "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/krita.png"
-        ]
+            {
+                "url": "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/krita.png",
+                "caption": "Interface de pintura digital no Krita."
+            }
+        ],
+        "license": "GPL-3.0",
+        "size": "250 MB",
+        "last_updated": "2025-05-10",
+        "tags": ["pintura digital", "ilustração", "arte"],
+        "alternative_versions": []
     }
 ]
