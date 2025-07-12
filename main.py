@@ -24,10 +24,11 @@ class AppImageShop(Gtk.Window):
         self.set_default_size(1200, 900)
         self.set_border_width(0)
 
-        # Diretórios para configuração, downloads e ícones
+        # Diretórios para configuração, downloads, ícones e cache
         self.config_dir = os.path.expanduser("~/.local/share/AppImageShop")
         self.config_file = os.path.join(self.config_dir, "config.ini")
         self.downloads_file = os.path.join(self.config_dir, "downloads.json")
+        self.cache_file = os.path.join(self.config_dir, "apps_cache.json")
         os.makedirs(self.config_dir, exist_ok=True)
 
         # Inicializa configuração e diretórios
@@ -52,9 +53,10 @@ class AppImageShop(Gtk.Window):
         self._apply_css()
         self._setup_ui()
 
-        # Carrega aplicativos se auto_refresh estiver habilitado
+        # Carrega aplicativos e inicia verificação de atualizações se auto_refresh estiver habilitado
         if self.config.getboolean('Settings', 'auto_refresh'):
             self.load_apps_from_url()
+            GLib.timeout_add_seconds(int(self.config['Settings']['update_interval']), self.check_for_updates)
 
     def set_app_icon(self):
         """Define o ícone da janela, baixando de APP_ICON_URL se necessário."""
@@ -81,7 +83,7 @@ class AppImageShop(Gtk.Window):
     def load_config(self):
         """Carrega configuração do config.ini com valores padrão."""
         defaults = {
-            'Settings': {'auto_refresh': 'True', 'last_tab': '0', 'last_category': 'Todos'},
+            'Settings': {'auto_refresh': 'True', 'last_tab': '0', 'last_category': 'Todos', 'update_interval': '3600'},
             'Accessibility': {'high_contrast': 'False', 'font_scale': '1.0'},
             'Appearance': {'theme': 'Sistema'},
             'Downloads': {'appimage_dir': os.path.expanduser("~/.local/bin/AppImages"),
@@ -270,7 +272,7 @@ class AppImageShop(Gtk.Window):
         search_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10, margin=20)
         apps_box.pack_start(search_box, False, False, 0)
 
-        self.search_entry = Gtk.Entry(placeholder_text="Pesquisar aplicativos...")
+        self.search_entry = Gtk.Entry(placeholder_text="Pesquisar aplicativos ou tags...")
         self.search_entry.connect("changed", self.on_search_changed)
         completion = Gtk.EntryCompletion()
         completion.set_model(self._create_completion_model())
@@ -334,8 +336,31 @@ class AppImageShop(Gtk.Window):
 
         return downloads_box
 
+    def validate_app_data(self, app):
+        """Valida os campos obrigatórios e tipos do JSON de um aplicativo."""
+        required_fields = ["name", "description", "appimage_url", "icon_url", "category", "app", "version", "details", "license", "size", "last_updated"]
+        optional_fields = ["screenshots", "tags", "alternative_versions"]
+        for field in required_fields:
+            if field not in app:
+                return False, f"Campo '{field}' ausente"
+            if not isinstance(app[field], str):
+                return False, f"Campo '{field}' deve ser uma string"
+        for field in optional_fields:
+            if field in app:
+                if field == "screenshots" and not isinstance(app[field], list):
+                    return False, "Campo 'screenshots' deve ser uma lista"
+                if field == "tags" and not isinstance(app[field], list):
+                    return False, "Campo 'tags' deve ser uma lista de strings"
+                if field == "alternative_versions" and not isinstance(app[field], list):
+                    return False, "Campo 'alternative_versions' deve ser uma lista"
+        if "screenshots" in app:
+            for screenshot in app["screenshots"]:
+                if not isinstance(screenshot, dict) or "url" not in screenshot or "caption" not in screenshot:
+                    return False, "Cada captura de tela deve ter 'url' e 'caption'"
+        return True, ""
+
     def load_apps_from_url(self):
-        """Carrega aplicativos da URL JSON configurada de forma assíncrona."""
+        """Carrega aplicativos da URL JSON configurada de forma assíncrona com cache."""
         self.header_bar.set_subtitle("Carregando aplicativos...")
         spinner = Gtk.Spinner()
         spinner.start()
@@ -345,9 +370,17 @@ class AppImageShop(Gtk.Window):
             try:
                 with urllib.request.urlopen(self.apps_data_url) as url:
                     data = json.loads(url.read().decode())
+                    with open(self.cache_file, 'w') as f:
+                        json.dump(data, f, indent=2)
                     GLib.idle_add(self._update_apps, data)
             except urllib.error.URLError as e:
-                GLib.idle_add(self.show_error_dialog, f"Falha ao carregar aplicativos: {e.reason}", True)
+                if os.path.exists(self.cache_file):
+                    with open(self.cache_file, 'r') as f:
+                        data = json.load(f)
+                    GLib.idle_add(self._update_apps, data)
+                    GLib.idle_add(self.show_notification, "Carregado do cache devido a falha na rede.")
+                else:
+                    GLib.idle_add(self.show_error_dialog, f"Falha ao carregar aplicativos: {e.reason}", True)
             except json.JSONDecodeError as e:
                 GLib.idle_add(self.show_error_dialog, f"Dados de aplicativo inválidos: {e}", False)
             finally:
@@ -358,11 +391,25 @@ class AppImageShop(Gtk.Window):
         threading.Thread(target=load_async, daemon=True).start()
 
     def _update_apps(self, data):
-        """Atualiza a lista de aplicativos e a UI."""
-        self.apps = data
+        """Atualiza a lista de aplicativos com validação e atualiza a UI."""
+        valid_apps = []
+        for app in data:
+            is_valid, error = self.validate_app_data(app)
+            if is_valid:
+                valid_apps.append(app)
+            else:
+                print(f"Aplicativo inválido: {error}")
+        self.apps = valid_apps
         self._setup_category_buttons()
         self.refresh_app_list()
         self.notebook.set_current_page(self.config.getint('Settings', 'last_tab'))
+
+    def check_for_updates(self):
+        """Verifica periodicamente por atualizações do JSON."""
+        if self.config.getboolean('Settings', 'auto_refresh'):
+            self.load_apps_from_url()
+            return GLib.timeout_add_seconds(int(self.config['Settings']['update_interval']), self.check_for_updates)
+        return False
 
     def _setup_category_buttons(self):
         """Configura botões de categoria na barra lateral."""
@@ -390,7 +437,8 @@ class AppImageShop(Gtk.Window):
 
         for app in self.apps:
             if (selected_category == "Todos" or app["category"] == selected_category) and \
-               (not search_text or search_text in app["name"].lower() or search_text in app["description"].lower()):
+               (not search_text or search_text in app["name"].lower() or search_text in app["description"].lower() or
+                any(search_text in tag.lower() for tag in app.get("tags", []))):
                 self._create_app_row(app, self.app_list)
 
         self.app_list.show_all()
@@ -465,7 +513,7 @@ class AppImageShop(Gtk.Window):
             name_box.pack_start(update_badge, False, False, 0)
         content_box.pack_start(name_box, False, False, 0)
 
-        version_label = Gtk.Label(label=f"v{app.get('version', 'N/A')}", halign=Gtk.Align.START)
+        version_label = Gtk.Label(label=f"v{app.get('version', 'N/A')} ({app.get('size', 'N/A')})", halign=Gtk.Align.START)
         version_label.get_style_context().add_class("version")
         content_box.pack_start(version_label, False, False, 0)
 
@@ -477,7 +525,7 @@ class AppImageShop(Gtk.Window):
         appimage_path = os.path.join(self.appimage_dir, f"{app['name']}.AppImage")
         action_button = Gtk.Button(label="Remover" if os.path.exists(appimage_path) else "Instalar")
         action_button.get_style_context().add_class("destructive-action" if os.path.exists(appimage_path) else "suggested-action")
-        action_button.connect("clicked", self.on_action_clicked, app["name"], app.get("appimage_url", ""), os.path.exists(appimage_path))
+        action_button.connect("clicked", self.on_action_clicked, app["name"], app.get("appimage_url", ""), os.path.exists(appimage_path), app.get("version"))
         button_box.pack_start(action_button, False, False, 0)
 
         if os.path.exists(appimage_path):
@@ -540,9 +588,10 @@ class AppImageShop(Gtk.Window):
         threading.Thread(target=load_icon_async, daemon=True).start()
         return icon
 
-    def get_screenshot_image(self, screenshot_url, app_name):
+    def get_screenshot_image(self, screenshot, app_name):
         """Carrega ou busca uma captura de tela de forma assíncrona."""
         image = Gtk.Image.new_from_icon_name("image-x-generic", Gtk.IconSize.DIALOG)
+        screenshot_url = screenshot.get("url")
         screenshot_path = os.path.join(self.icon_dir, f"{quote(app_name)}_screenshot_{quote(screenshot_url.split('/')[-1])}")
         if os.path.exists(screenshot_path):
             try:
@@ -695,11 +744,18 @@ class AppImageShop(Gtk.Window):
         general_grid.attach(auto_refresh_label, 0, 0, 1, 1)
         general_grid.attach(auto_refresh_switch, 1, 0, 1, 1)
 
+        update_interval_label = Gtk.Label(label="Intervalo de Atualização (segundos)", halign=Gtk.Align.START)
+        update_interval_label.get_style_context().add_class("settings-label")
+        update_interval_spin = Gtk.SpinButton(adjustment=Gtk.Adjustment(value=float(self.config.get('Settings', 'update_interval')), lower=300, upper=86400, step_increment=300), digits=0)
+        update_interval_spin.set_tooltip_text("Definir intervalo de atualização (300 a 86400 segundos)")
+        general_grid.attach(update_interval_label, 0, 1, 1, 1)
+        general_grid.attach(update_interval_spin, 1, 1, 1, 1)
+
         reset_button = Gtk.Button(label="Redefinir Configurações")
         reset_button.get_style_context().add_class("destructive-action")
         reset_button.set_tooltip_text("Redefinir todas as configurações para o padrão")
         reset_button.connect("clicked", self.on_reset_settings_clicked)
-        general_grid.attach(reset_button, 1, 1, 1, 1)
+        general_grid.attach(reset_button, 1, 2, 1, 1)
 
         notebook.append_page(general_box, Gtk.Label(label="Geral"))
 
@@ -724,6 +780,7 @@ class AppImageShop(Gtk.Window):
                 self.config['Downloads']['appimage_dir'] = appimage_dir_chooser.get_filename()
                 self.config['Downloads']['apps_data_url'] = apps_data_url_entry.get_text() or DEFAULT_APPS_DATA_URL
                 self.config['Settings']['auto_refresh'] = str(auto_refresh_switch.get_active())
+                self.config['Settings']['update_interval'] = str(int(update_interval_spin.get_value()))
                 self.save_config()
                 self.appimage_dir = self.config.get('Downloads', 'appimage_dir')
                 self.apps_data_url = self.config.get('Downloads', 'apps_data_url')
@@ -794,14 +851,14 @@ class AppImageShop(Gtk.Window):
 
         icon = self.get_custom_icon(app)
         icon.set_property("visible", True)
-        content_grid.attach(icon, 0, 0, 1, 3)
+        content_grid.attach(icon, 0, 0, 1, 4)
 
         name_label = Gtk.Label(label=f"<b>{app['name']}</b>", use_markup=True, halign=Gtk.Align.START)
         name_label.get_style_context().add_class("title")
         name_label.set_property("visible", True)
         content_grid.attach(name_label, 1, 0, 1, 1)
 
-        version_label = Gtk.Label(label=f"<b>Versão:</b> {app.get('version', 'N/A')}", use_markup=True, halign=Gtk.Align.START)
+        version_label = Gtk.Label(label=f"<b>Versão:</b> {app.get('version', 'N/A')} ({app.get('size', 'N/A')})", use_markup=True, halign=Gtk.Align.START)
         version_label.get_style_context().add_class("details-text")
         version_label.set_property("visible", True)
         content_grid.attach(version_label, 1, 1, 1, 1)
@@ -811,43 +868,70 @@ class AppImageShop(Gtk.Window):
         category_label.set_property("visible", True)
         content_grid.attach(category_label, 1, 2, 1, 1)
 
+        license_label = Gtk.Label(label=f"<b>Licença:</b> {app.get('license', 'N/A')}", use_markup=True, halign=Gtk.Align.START)
+        license_label.get_style_context().add_class("details-text")
+        license_label.set_property("visible", True)
+        content_grid.attach(license_label, 1, 3, 1, 1)
+
+        last_updated_label = Gtk.Label(label=f"<b>Última Atualização:</b> {app.get('last_updated', 'N/A')}", use_markup=True, halign=Gtk.Align.START)
+        last_updated_label.get_style_context().add_class("details-text")
+        last_updated_label.set_property("visible", True)
+        content_grid.attach(last_updated_label, 1, 4, 1, 1)
+
+        tags_label = Gtk.Label(label=f"<b>Tags:</b> {', '.join(app.get('tags', [])) or 'N/A'}", use_markup=True, halign=Gtk.Align.START)
+        tags_label.get_style_context().add_class("details-text")
+        tags_label.set_property("visible", True)
+        content_grid.attach(tags_label, 1, 5, 1, 1)
+
         description_title = Gtk.Label(label="<b>Descrição</b>", use_markup=True, halign=Gtk.Align.START)
         description_title.get_style_context().add_class("details-label")
         description_title.set_property("visible", True)
-        content_grid.attach(description_title, 0, 3, 2, 1)
+        content_grid.attach(description_title, 0, 6, 2, 1)
 
-        desc_label = Gtk.Label(label=app.get("description", "Sem descrição disponível"), wrap=True, max_width_chars=80, halign=Gtk.Align.START)
+        desc_label = Gtk.Label(label=app.get("details", "Sem descrição disponível"), wrap=True, max_width_chars=80, halign=Gtk.Align.START)
         desc_label.get_style_context().add_class("details-text")
         desc_label.set_property("visible", True)
-        content_grid.attach(desc_label, 0, 4, 2, 1)
+        content_grid.attach(desc_label, 0, 7, 2, 1)
 
         screenshot_label = Gtk.Label(label="<b>Capturas de Tela</b>", use_markup=True, halign=Gtk.Align.START)
         screenshot_label.get_style_context().add_class("details-label")
         screenshot_label.set_property("visible", True)
-        content_grid.attach(screenshot_label, 0, 5, 2, 1)
+        content_grid.attach(screenshot_label, 0, 8, 2, 1)
 
         screenshots = app.get("screenshots", [])
         if screenshots:
-            screenshot_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            screenshot_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
             screenshot_box.set_property("visible", True)
-            for screenshot_url in screenshots[:3]:
-                image = self.get_screenshot_image(screenshot_url, app["name"])
+            for screenshot in screenshots[:3]:
+                image = self.get_screenshot_image(screenshot, app["name"])
                 image.set_property("visible", True)
+                caption_label = Gtk.Label(label=screenshot.get("caption", "Sem legenda"), wrap=True, halign=Gtk.Align.CENTER)
+                caption_label.get_style_context().add_class("details-text")
+                caption_label.set_property("visible", True)
                 screenshot_box.pack_start(image, False, False, 0)
-            content_grid.attach(screenshot_box, 0, 6, 2, 1)
+                screenshot_box.pack_start(caption_label, False, False, 0)
+            content_grid.attach(screenshot_box, 0, 9, 2, 1)
         else:
             screenshot_placeholder = Gtk.Image.new_from_icon_name("image-x-generic", Gtk.IconSize.DIALOG)
             screenshot_placeholder.set_property("visible", True)
-            content_grid.attach(screenshot_placeholder, 0, 6, 2, 1)
+            content_grid.attach(screenshot_placeholder, 0, 9, 2, 1)
 
         appimage_path = os.path.join(self.appimage_dir, f"{app['name']}.AppImage")
         button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10, halign=Gtk.Align.END, margin_end=10, margin_bottom=10)
         button_box.set_property("visible", True)
         details_box.pack_end(button_box, False, False, 0)
 
+        version_combo = Gtk.ComboBoxText()
+        version_combo.append_text(f"{app['version']} ({app.get('size', 'N/A')})")
+        for alt_version in app.get("alternative_versions", []):
+            version_combo.append_text(f"{alt_version['version']} ({alt_version.get('size', 'N/A')})")
+        version_combo.set_active(0)
+        version_combo.set_property("visible", True)
+        button_box.pack_start(version_combo, False, False, 0)
+
         self.action_button = Gtk.Button(label="Remover" if os.path.exists(appimage_path) else "Instalar")
         self.action_button.get_style_context().add_class("destructive-action" if os.path.exists(appimage_path) else "suggested-action")
-        self.action_button.connect("clicked", self.on_action_clicked, app["name"], app.get("appimage_url", ""), os.path.exists(appimage_path))
+        self.action_button.connect("clicked", self.on_action_clicked, app["name"], app.get("appimage_url", ""), os.path.exists(appimage_path), app.get("version"), version_combo)
         self.action_button.set_property("visible", True)
         button_box.pack_start(self.action_button, False, False, 0)
 
@@ -872,8 +956,17 @@ class AppImageShop(Gtk.Window):
         except Exception as e:
             self.show_notification(f"Erro ao iniciar {app_name}: {e}")
 
-    def on_action_clicked(self, button, name, url, installed):
+    def on_action_clicked(self, button, name, url, installed, version, version_combo):
         """Manipula clique no botão de instalar/remover."""
+        selected_version = version_combo.get_active_text().split(" (")[0]
+        app = next((a for a in self.apps if a["name"] == name), None)
+        if selected_version != version:
+            for alt_version in app.get("alternative_versions", []):
+                if alt_version["version"] == selected_version:
+                    url = alt_version["appimage_url"]
+                    version = alt_version["version"]
+                    break
+
         if installed:
             dialog = Gtk.MessageDialog(transient_for=self, message_type=Gtk.MessageType.QUESTION,
                                       buttons=Gtk.ButtonsType.YES_NO, text=f"Remover {name}?")
@@ -890,20 +983,20 @@ class AppImageShop(Gtk.Window):
                 self.show_notification(f"Nenhuma URL de download disponível para {name}.")
                 return
             dialog = Gtk.MessageDialog(transient_for=self, message_type=Gtk.MessageType.QUESTION,
-                                      buttons=Gtk.ButtonsType.YES_NO, text=f"Instalar {name}?")
+                                      buttons=Gtk.ButtonsType.YES_NO, text=f"Instalar {name} (v{selected_version})?")
             if dialog.run() == Gtk.ResponseType.YES:
                 button.set_sensitive(False)
                 self.downloads[name] = {"progress": 0.0, "status": "Iniciando...", "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
                 self.update_download_history(name, self.downloads[name])
                 self.refresh_downloads_list()
                 self.notebook.set_current_page(2)
-                thread = threading.Thread(target=self._download_and_install_appimage, args=(url, name, button), daemon=True)
+                thread = threading.Thread(target=self._download_and_install_appimage, args=(url, name, button, version), daemon=True)
                 thread.cancelled = False
                 self.download_threads[name] = thread
                 thread.start()
             dialog.destroy()
 
-    def _download_and_install_appimage(self, url, name, button):
+    def _download_and_install_appimage(self, url, name, button, version):
         """Baixa e instala um AppImage."""
         appimage_path = os.path.join(self.appimage_dir, f"{name}.AppImage")
         try:
@@ -925,13 +1018,13 @@ Type=Application
 Icon={os.path.join(self.icon_dir, f"{quote(name)}.png")}
 Terminal=false
 Categories={app_data['app']};
-Comment=Versão: {app_data['version']}"""
+Comment=Versão: {version}"""
             desktop_path = os.path.expanduser(f"~/.local/share/applications/{name}.desktop")
             with open(desktop_path, 'w') as f:
                 f.write(desktop_file_content)
 
             GLib.idle_add(self._update_download_progress, name, 1.0, "Concluído")
-            GLib.idle_add(self.show_notification, f"{name} instalado com sucesso!")
+            GLib.idle_add(self.show_notification, f"{name} (v{version}) instalado com sucesso!")
             GLib.idle_add(self.refresh_app_list)
             GLib.idle_add(self._update_action_button, button, name, True)
             GLib.idle_add(lambda: self.downloads.pop(name, None) and self.download_threads.pop(name, None) and self.refresh_downloads_list())
@@ -986,13 +1079,12 @@ Comment=Versão: {app_data['version']}"""
     def show_error_dialog(self, message, offer_retry):
         """Exibe um diálogo de erro com opção de tentar novamente, se aplicável."""
         dialog = Gtk.MessageDialog(transient_for=self, message_type=Gtk.MessageType.ERROR,
-                                  buttons=Gtk.ButtonsType.YES_NO if offer_retry else Gtk.ButtonsType.OK, text=message)
+                                  buttons=Gtk.ButtonsType.YES_NO if offer_retry else Gtk.ButtonsType.OK, text="Erro")
+        dialog.format_secondary_text(message)
         if offer_retry:
-            dialog.format_secondary_text("Tentar novamente?")
+            dialog.format_secondary_text(f"{message}\n\nTentar novamente?")
         if dialog.run() == Gtk.ResponseType.YES and offer_retry:
             self.load_apps_from_url()
-            self.refresh_app_list()
-            self.refresh_downloads_list()
         dialog.destroy()
 
     def _create_completion_model(self):
@@ -1001,6 +1093,8 @@ Comment=Versão: {app_data['version']}"""
         for app in self.apps:
             model.append([app["name"]])
             model.append([app["category"]])
+            for tag in app.get("tags", []):
+                model.append([tag])
         return model
 
 def main():
