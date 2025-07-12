@@ -54,5 +54,19 @@
         "screenshots": [
             "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/libreoffice.png"
         ]
+    },
+    {
+        "name": "Krita",
+        "description": "Excelente para pintura digital, ilustração e design de arte conceitual, com foco em artistas.",
+        "appimage_url": "https://download.kde.org/stable/krita/5.2.10/krita-5.2.10-x86_64.AppImage",
+        "icon_url": "https://upload.wikimedia.org/wikipedia/commons/7/73/Calligrakrita-base.svg",
+        "icon": "krita",
+        "category": "Gráficos",
+        "app": "Graphics",
+        "version": "5.2.10",
+        "details": "Krita é uma ferramenta de criação de ilustrações, concept art, histórias em quadrinhos, pinturas digitais e animações, também podendo ser usado como um programa de retoques e manipulação de fotografia, conversor de formatos, suportando vários modelos de cores e pintura HDR.",
+        "screenshots": [
+            "https://raw.githubusercontent.com/appimage-shop/app/refs/heads/main/screenshots/krita.png"
+        ]
     }
 ]
